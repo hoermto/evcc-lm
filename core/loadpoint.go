@@ -103,12 +103,14 @@ type LoadPoint struct {
 	sync.Mutex                // guard status
 	Mode       api.ChargeMode `mapstructure:"mode"` // Charge mode, guarded by mutex
 
-	Title             string   `mapstructure:"title"`    // UI title
-	ConfiguredPhases  int      `mapstructure:"phases"`   // Charger configured phase mode 0/1/3
-	ChargerRef        string   `mapstructure:"charger"`  // Charger reference
-	VehicleRef        string   `mapstructure:"vehicle"`  // Vehicle reference
-	VehiclesRef_      []string `mapstructure:"vehicles"` // TODO deprecated
-	MeterRef          string   `mapstructure:"meter"`    // Charge meter reference
+	Title            string   `mapstructure:"title"`        // UI title
+	ConfiguredPhases int      `mapstructure:"phases"`       // Charger configured phase mode 0/1/3
+	ChargerRef       string   `mapstructure:"charger"`      // Charger reference
+	VehicleRef       string   `mapstructure:"vehicle"`      // Vehicle reference
+	VehiclesRef_     []string `mapstructure:"vehicles"`     // TODO deprecated
+	MeterRef         string   `mapstructure:"meter"`        // Charge meter reference
+	CircuitsRef      []string `mapstructure:"circuitNames"` // circuits this lp belongs to
+
 	SoC               SoCConfig
 	Enable, Disable   ThresholdConfig
 	ResetOnDisconnect bool `mapstructure:"resetOnDisconnect"`
@@ -117,6 +119,7 @@ type LoadPoint struct {
 	MinCurrent    float64       // PV mode: start current	Min+PV mode: min current
 	MaxCurrent    float64       // Max allowed current. Physically ensured by the charger
 	GuardDuration time.Duration // charger enable/disable minimum holding time
+	Circuits      []*Circuit    // list of circuits this lp belongs to
 
 	enabled             bool      // Charger enabled state
 	phases              int       // Charger enabled phases, guarded by mutex
@@ -598,6 +601,23 @@ func (lp *LoadPoint) syncCharger() {
 
 // setLimit applies charger current limits and enables/disables accordingly
 func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
+	// apply load management, use all assigned limiters
+	lp.publish("currentLimitedBy", "")
+	if lp.Circuits != nil && chargeCurrent > 0.0 {
+		for _, circ := range lp.Circuits {
+			maxCur := circ.GetAvailableCurrent()
+			// maxCur includes the consumption of this loadpoint, so add
+			newCur := maxCur + lp.effectiveCurrent()
+			// apply not more than requested. If too less current is available, make sure its not negative
+			chargeCurrentNew := math.Min(math.Max(newCur, 0.0), chargeCurrent)
+			if chargeCurrentNew < chargeCurrent {
+				lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit %s", chargeCurrent, chargeCurrentNew, circ.Name)
+				chargeCurrent = chargeCurrentNew
+				lp.publish("currentLimitedBy", circ.Name)
+			}
+		}
+	}
+
 	// set current
 	if chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent() {
 		var err error
@@ -1032,6 +1052,11 @@ func (lp *LoadPoint) updateChargerStatus() error {
 	}
 
 	return nil
+}
+
+// implements interface Consumer, redirects to effectiveCurrent
+func (lp *LoadPoint) GetEffectiveCurrent() float64 {
+	return lp.effectiveCurrent()
 }
 
 // effectiveCurrent returns the currently effective charging current

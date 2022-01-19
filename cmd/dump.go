@@ -42,7 +42,7 @@ func runDump(cmd *cobra.Command, args []string) {
 		log.FATAL.Fatal(err)
 	}
 
-	site, err := configureSiteAndLoadpoints(conf)
+	site, err := configureSiteLoadpointsCircuits(conf)
 	if err != nil {
 		log.FATAL.Fatal(err)
 	}

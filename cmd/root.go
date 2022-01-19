@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/evcc-io/evcc/cmd/shutdown"
-	"github.com/evcc-io/evcc/core"
 	"github.com/evcc-io/evcc/push"
 	"github.com/evcc-io/evcc/server"
 	"github.com/evcc-io/evcc/server/updater"
@@ -220,6 +219,24 @@ func run(cmd *cobra.Command, args []string) {
 
 	log.INFO.Printf("listening at :%d", conf.Network.Port)
 
+	// setup environment
+	if err := configureEnvironment(conf); err != nil {
+		log.FATAL.Fatal(err)
+	}
+
+	// full http request log
+	if cmd.PersistentFlags().Lookup(flagHeaders).Changed {
+		request.LogHeaders = true
+	}
+
+	// setup site and loadpoints
+	site, err := configureSiteLoadpointsCircuits(conf)
+	if err == nil {
+		cp.TrackVisitors() // track duplicate usage
+	} else {
+		log.FATAL.Fatal(err)
+	}
+
 	// start broadcasting values
 	tee := new(util.Tee)
 
@@ -251,13 +268,6 @@ func run(cmd *cobra.Command, args []string) {
 	// setup environment
 	if err == nil {
 		err = configureEnvironment(conf)
-	}
-
-	// setup site and loadpoints
-	var site *core.Site
-	if err == nil {
-		cp.TrackVisitors() // track duplicate usage
-		site, err = configureSiteAndLoadpoints(conf)
 	}
 
 	// setup database

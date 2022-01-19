@@ -46,6 +46,7 @@ type config struct {
 	Tariffs      tariffConfig
 	Site         map[string]interface{}
 	LoadPoints   []map[string]interface{}
+	Circuits     []map[string]interface{}
 }
 
 type networkConfig struct {
