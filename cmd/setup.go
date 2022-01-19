@@ -252,7 +252,7 @@ func configureTariffs(conf tariffConfig) (tariff.Tariffs, error) {
 	return *tariffs, err
 }
 
-func configureSiteAndLoadpoints(conf config) (site *core.Site, err error) {
+func configureSiteLoadpointsCircuits(conf config) (site *core.Site, err error) {
 	if err = cp.configure(conf); err == nil {
 		var loadPoints []*core.LoadPoint
 		loadPoints, err = configureLoadPoints(conf, cp)
@@ -269,6 +269,10 @@ func configureSiteAndLoadpoints(conf config) (site *core.Site, err error) {
 			})
 
 			site, err = configureSite(conf.Site, cp, loadPoints, vehicles, tariffs)
+		}
+
+		if err == nil {
+			err = configureCircuits(site, loadPoints, cp)
 		}
 	}
 
@@ -306,4 +310,57 @@ func configureLoadPoints(conf config, cp *ConfigProvider) (loadPoints []*core.Lo
 	}
 
 	return loadPoints, nil
+}
+
+func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *ConfigProvider) (err error) {
+	ccInterfaces, ok := viper.AllSettings()["circuits"].([]interface{})
+	if !ok {
+		// no circuits configured
+		// in this case, check LPs dont have circuit references
+		for _, curLp := range loadPoints {
+			if len(curLp.CircuitsRef) > 0 {
+				return fmt.Errorf("loadpoint %s uses circuit(s), but no circuits are defined", curLp.Title)
+			}
+		}
+		return nil
+	}
+
+	var circuits []*core.Circuit
+	cNames := map[string]bool{} // to check double names
+	for id, ccI := range ccInterfaces {
+		var ccMap map[string]interface{}
+		if err := util.DecodeOther(ccI, &ccMap); err != nil {
+			return fmt.Errorf("failed decoding circuit configuration: %w", err)
+		}
+
+		log := util.NewLogger("cc-" + strconv.Itoa(id+1))
+		ccNew, err := core.NewCircuitFromConfig(log, cp, ccMap, site)
+		if err != nil {
+			return fmt.Errorf("failed configuring circuit: %w", err)
+		}
+
+		if cNames[ccNew.Name] {
+			return fmt.Errorf("circuit %s used twice, needs to be unique name", ccNew.Name)
+		}
+		cNames[ccNew.Name] = true
+		circuits = append(circuits, ccNew)
+	}
+	site.Circuits = circuits
+	// connect circuits and lps
+	for _, curCC := range circuits {
+		for _, curLp := range loadPoints {
+			for _, lpCircuitName := range curLp.CircuitsRef {
+				if !cNames[lpCircuitName] {
+					return fmt.Errorf("loadpoint %s has invalid circuit: %s", curLp.Title, lpCircuitName)
+				}
+				if lpCircuitName == curCC.Name {
+					// assign consumers
+					curCC.Consumers = append(curCC.Consumers, curLp)
+					// give the LP the circuit
+					curLp.Circuits = append(curLp.Circuits, curCC)
+				}
+			}
+		}
+	}
+	return nil
 }
