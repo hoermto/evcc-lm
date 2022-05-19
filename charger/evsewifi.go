@@ -21,6 +21,7 @@ type EVSEWifi struct {
 	current      int64 // current will always be the physical value sent to the API
 	hires        bool
 	paramG       provider.Cacheable[evse.ListEntry]
+	log          *util.Logger
 }
 
 func init() {
@@ -120,6 +121,7 @@ func NewEVSEWifi(uri string, cache time.Duration) (*EVSEWifi, error) {
 		Helper:  request.NewHelper(log),
 		uri:     strings.TrimRight(uri, "/"),
 		current: 6, // 6A defined value
+		log:     log,
 	}
 
 	wb.paramG = provider.ResettableCached(func() (evse.ListEntry, error) {
