@@ -58,10 +58,6 @@ func NewEVSEWifiFromConfig(other map[string]interface{}) (api.Charger, error) {
 		return wb, err
 	}
 
-	if !params.AlwaysActive {
-		return nil, errors.New("evse must be configured to remote mode")
-	}
-
 	if params.UseMeter {
 		cc.Meter.Power = true
 		cc.Meter.Energy = true
@@ -145,6 +141,7 @@ func NewEVSEWifi(uri string, cache time.Duration) (*EVSEWifi, error) {
 // Status implements the api.Charger interface
 func (wb *EVSEWifi) Status() (api.ChargeStatus, error) {
 	params, err := wb.paramG.Get()
+	wb.log.TRACE.Println("Status()")
 	if err != nil {
 		return api.StatusNone, err
 	}
@@ -165,9 +162,32 @@ func (wb *EVSEWifi) Status() (api.ChargeStatus, error) {
 	}
 }
 
+// check whether there is a manual intervention on the charger:
+// either by Button, GUI, RFID or Timer and "alwaysActive" is false
+// if so, dont allow changing the charger
+func (wb *EVSEWifi) controlAllowed() error {
+	params, err := wb.paramG.Get()
+	if err != nil {
+		return err
+	}
+	if !params.AlwaysActive {
+		wb.log.DEBUG.Println("charger in manual mode")
+		// in manual mode when active, check intervention on charger
+		if params.EvseState {
+			wb.log.DEBUG.Printf("charger active with action: %s", params.LastActionUser)
+			if params.LastActionUser != "API" && params.LastActionUser != "" {
+				return fmt.Errorf("charger has manual intervention: %s (UID: %s)", params.LastActionUser, params.LastActionUID)
+			}
+		}
+	}
+	wb.log.DEBUG.Println("charger allowed for remote control")
+	return nil
+}
+
 // Enabled implements the api.Charger interface
 func (wb *EVSEWifi) Enabled() (bool, error) {
 	params, err := wb.paramG.Get()
+	wb.log.TRACE.Println("Enabled()")
 	return params.EvseState, err
 }
 
@@ -182,6 +202,10 @@ func (wb *EVSEWifi) get(uri string) error {
 
 // Enable implements the api.Charger interface
 func (wb *EVSEWifi) Enable(enable bool) error {
+	wb.log.TRACE.Printf("Enable (%t)", enable)
+	if err := wb.controlAllowed(); err != nil {
+		return err
+	}
 	uri := fmt.Sprintf("%s/setStatus?active=%v", wb.uri, enable)
 	if wb.alwaysActive {
 		var current int64
@@ -201,6 +225,10 @@ func (wb *EVSEWifi) Enable(enable bool) error {
 
 // MaxCurrent implements the api.Charger interface
 func (wb *EVSEWifi) MaxCurrent(current int64) error {
+	wb.log.TRACE.Printf("MaxCurrent(%d)", current)
+	if err := wb.controlAllowed(); err != nil {
+		return err
+	}
 	if wb.hires {
 		current = 100 * current
 	}
@@ -217,6 +245,10 @@ func (wb *EVSEWifi) MaxCurrent(current int64) error {
 
 // maxCurrentEx implements the api.ChargerEx interface
 func (wb *EVSEWifi) maxCurrentEx(current float64) error {
+	wb.log.TRACE.Printf("MaxCurrentEx(%f)", current)
+	if err := wb.controlAllowed(); err != nil {
+		return err
+	}
 	wb.current = int64(100 * current)
 	uri := fmt.Sprintf("%s/setCurrent?current=%d", wb.uri, wb.current)
 	return wb.get(uri)
