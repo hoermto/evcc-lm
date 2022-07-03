@@ -288,48 +288,41 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 		// no circuits configured
 		// in this case, check LPs dont have circuit references
 		for _, curLp := range loadPoints {
-			if len(curLp.CircuitsRef) > 0 {
+			if len(curLp.CircuitRef) > 0 {
 				return fmt.Errorf("loadpoint %s uses circuit(s), but no circuits are defined", curLp.Title)
 			}
 		}
 		return nil
 	}
 
-	var circuits []*core.Circuit
-	cNames := map[string]bool{} // to check double names
-	for id, ccI := range ccInterfaces {
+	for ccId, ccI := range ccInterfaces {
 		var ccMap map[string]interface{}
 		if err := util.DecodeOther(ccI, &ccMap); err != nil {
 			return fmt.Errorf("failed decoding circuit configuration: %w", err)
 		}
 
-		log := util.NewLogger("cc-" + strconv.Itoa(id+1))
-		ccNew, err := core.NewCircuitFromConfig(log, cp, ccMap, site)
+		ccNew, err := core.NewCircuitFromConfig(cp, ccMap, site)
 		if err != nil {
 			return fmt.Errorf("failed configuring circuit: %w", err)
 		}
 
-		if cNames[ccNew.Name] {
-			return fmt.Errorf("circuit %s used twice, needs to be unique name", ccNew.Name)
-		}
-		cNames[ccNew.Name] = true
-		circuits = append(circuits, ccNew)
+		ccNew.PrintCircuits(0)
+		site.Circuits = append(site.Circuits, ccNew)
+		site.Circuits[ccId].PrintCircuits(0)
 	}
-	site.Circuits = circuits
 	// connect circuits and lps
-	for _, curCC := range circuits {
-		for _, curLp := range loadPoints {
-			for _, lpCircuitName := range curLp.CircuitsRef {
-				if !cNames[lpCircuitName] {
-					return fmt.Errorf("loadpoint %s has invalid circuit: %s", curLp.Title, lpCircuitName)
-				}
-				if lpCircuitName == curCC.Name {
-					// assign consumers
-					curCC.Consumers = append(curCC.Consumers, curLp)
-					// give the LP the circuit
-					curLp.Circuits = append(curLp.Circuits, curCC)
-				}
+	for lpId, _ := range loadPoints {
+		for ccId, _ := range site.Circuits {
+			loadPoints[lpId].CircuitPtr = site.Circuits[ccId].GetCircuit(loadPoints[lpId].CircuitRef)
+			if loadPoints[lpId].CircuitPtr != nil {
+				loadPoints[lpId].CircuitPtr.GetRemainingCurrent()
+				loadPoints[lpId].CircuitPtr.Consumers = append(loadPoints[lpId].CircuitPtr.Consumers, loadPoints[lpId])
+				break
 			}
+		}
+		if loadPoints[lpId].CircuitRef != "" && loadPoints[lpId].CircuitPtr == nil {
+			// if we are here, no circuit with this name exists
+			return fmt.Errorf("loadpoint uses undefined circuit: %s", loadPoints[lpId].CircuitRef)
 		}
 	}
 	return nil

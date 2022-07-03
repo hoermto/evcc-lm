@@ -224,9 +224,11 @@ func (site *Site) DumpConfig() {
 			)
 		}
 	}
-	site.log.INFO.Printf("  circuits:")
-	for _, cc := range site.Circuits {
-		site.log.INFO.Printf("    %-10s max %.1fA %d consumers ", cc.Name+":", cc.MaxCurrent, len(cc.Consumers))
+	site.log.INFO.Printf("circuits:")
+	for id, _ := range site.Circuits {
+		for _, s := range site.Circuits[id].DumpConfig(2, 13) {
+			site.log.INFO.Printf(s)
+		}
 	}
 
 	if vehicles := site.GetVehicles(); len(vehicles) > 0 {
@@ -247,13 +249,9 @@ func (site *Site) DumpConfig() {
 	for i, lp := range site.loadpoints {
 		lp.log.INFO.Printf("loadpoint %d:", i+1)
 		lp.log.INFO.Printf("  mode:        %s", lp.GetMode())
-		var ccNames string
-		if len(lp.Circuits) > 0 {
-			for _, curCC := range lp.Circuits {
-				ccNames = fmt.Sprintf("%s %s", ccNames, curCC.Name)
-			}
+		if lp.CircuitPtr != nil {
+			lp.log.INFO.Printf("  circuit:     %s", lp.CircuitRef)
 		}
-		lp.log.INFO.Printf("  circuits:   %s", ccNames)
 
 		_, power := lp.charger.(api.Meter)
 		_, energy := lp.charger.(api.MeterEnergy)
