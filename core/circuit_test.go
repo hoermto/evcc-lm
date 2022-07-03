@@ -12,7 +12,7 @@ type testConsumer struct {
 }
 
 // interface consumer
-func (dc *testConsumer) GetEffectiveCurrent() float64 {
+func (dc *testConsumer) GetCurrent() float64 {
 	return dc.cur
 }
 
@@ -48,11 +48,11 @@ func TestCurrentCircuitConsumers(t *testing.T) {
 	var curAv float64
 
 	// no LP is consuming
-	assert.Equal(t, circ.EvaluateConsumption(), 0.0)
+	assert.Equal(t, circ.GetCurrent(), 0.0)
 
 	// asking for current should return the total limit set
 	// the Request does not change the LP current ..
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, curAv, limit)
 
 	// one lp consumes current
@@ -60,19 +60,19 @@ func TestCurrentCircuitConsumers(t *testing.T) {
 
 	// asking for current should now return 0, because 1st lp already has complete consumption
 	// the Request does not change the LP current ..
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, curAv, 0.0)
 
 	// increase the limit of the limiter, now we should get the delta
 	circ.MaxCurrent = maxA + 3.0
 
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, curAv, 3.0)
 
 	// now reduce limit. there should be no remaining current / negative
 	// overload condition
 	circ.MaxCurrent = 10.0
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.LessOrEqual(t, curAv, 0.0)
 }
 
@@ -84,21 +84,21 @@ func TestCurrentCircuitMeter(t *testing.T) {
 
 	var curAv float64
 	// no consumption
-	assert.Equal(t, circ.EvaluateConsumption(), 0.0)
+	assert.Equal(t, circ.GetCurrent(), 0.0)
 
 	// no consumption from meter, return limit
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, limit, curAv)
 
 	// set some consumption on meter
 	mtr.cur = 5
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, limit-mtr.cur, curAv)
 
 	// simulate production in circuit (negative consumption)
 	// available current is limit - consumption
 	mtr.cur = -5
-	curAv = circ.GetAvailableCurrent()
+	curAv = circ.GetRemainingCurrent()
 	assert.Equal(t, limit-mtr.cur, curAv)
 }
 
@@ -109,6 +109,6 @@ func TestCurrentCircuitPrio(t *testing.T) {
 	assert.NotNilf(t, circ, "circuit not created")
 	circ.Consumers = append(circ.Consumers, &testConsumer{cur: 16})
 	// circuit has meter and consumers. meter has prio
-	curAv := circ.GetAvailableCurrent()
+	curAv := circ.GetRemainingCurrent()
 	assert.Equal(t, limit-mtr.cur, curAv)
 }

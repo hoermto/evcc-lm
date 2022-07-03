@@ -119,7 +119,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	log.INFO.Printf("starting ui and api at :%d", conf.Network.Port)
 
 	// setup environment
-	if err := configureEnvironment(conf); err != nil {
+	if err := configureEnvironment(cmd, conf); err != nil {
 		log.FATAL.Fatal(err)
 	}
 
