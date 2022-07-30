@@ -619,16 +619,19 @@ func (lp *LoadPoint) syncCharger() {
 
 // setLimit applies charger current limits and enables/disables accordingly
 func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
-	// apply load management, use all assigned limiters
+	// apply load management
 	if lp.CircuitPtr != nil && chargeCurrent > 0.0 {
 		maxCur := lp.CircuitPtr.GetRemainingCurrent()
-		// maxCur includes the consumption of this loadpoint, so add
+		// maxCur includes the consumption of this loadpoint, so adjust using consumer interface
 		newCur := maxCur + lp.effectiveCurrent()
 		// apply not more than requested. If too less current is available, make sure its not negative
 		chargeCurrentNew := math.Min(math.Max(newCur, 0.0), chargeCurrent)
+		// later here the function checks for having less than MinCurrent()
 		if chargeCurrentNew < chargeCurrent {
 			lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit %s", chargeCurrent, chargeCurrentNew, lp.CircuitPtr.Name)
 			chargeCurrent = chargeCurrentNew
+			// also set force to ensure not overloading the circuit
+			force = true
 		}
 	}
 
@@ -1144,7 +1147,19 @@ func (lp *LoadPoint) updateChargerStatus() error {
 
 // implements interface Consumer, redirects to effectiveCurrent
 func (lp *LoadPoint) GetCurrent() float64 {
+	// using effective current in use.
+	// potential issue: slow LP might cause interference or overload
 	return lp.effectiveCurrent()
+
+	// alternatively use assigned current
+	// potential issue: LP in mode != "off" will always report their assigned current, but not real used
+	// if the vehicle remains in state "charging" but only uses 500W for Aircon, this might block 16A in the circuit
+
+	// if !lp.charging() {
+	// 	return 0
+	// } else {
+	// 	return lp.chargeCurrent
+	// }
 }
 
 // effectiveCurrent returns the currently effective charging current
