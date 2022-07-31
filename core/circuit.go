@@ -253,4 +253,7 @@ func (cc *Circuit) publish(key string, val interface{}) {
 func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 	cc.uiChan = uiChan
 	cc.publish("maxCurrent", cc.MaxCurrent)
+	for ccId, _ := range cc.Circuits {
+		cc.Circuits[ccId].Prepare(uiChan)
+	}
 }
