@@ -1736,6 +1736,9 @@ func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
 	lp.publish("connected", lp.connected())
 	lp.publish("charging", lp.charging())
 	lp.publish("enabled", lp.enabled)
+	if lp.CircuitPtr != nil {
+		lp.publish("circuit", lp.CircuitPtr.Name)
+	}
 
 	// identify connected vehicle
 	if lp.connected() {
