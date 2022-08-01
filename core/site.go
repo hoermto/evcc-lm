@@ -259,7 +259,7 @@ func (site *Site) DumpConfig() {
 		}
 	}
 	site.log.INFO.Printf("circuits:")
-	for id, _ := range site.Circuits {
+	for id := range site.Circuits {
 		for _, s := range site.Circuits[id].DumpConfig(2, 13) {
 			site.log.INFO.Printf(s)
 		}
@@ -517,6 +517,10 @@ func (site *Site) update(lp Updater) {
 	if telemetry.Enabled() && totalChargePower > standbyPower {
 		go telemetry.UpdateChargeProgress(site.log, totalChargePower, deltaCharged, deltaSelf)
 	}
+	
+	// update all circuits to refresh the data when no loadpoints are upated
+	for ccId := range site.Circuits {
+		site.Circuits[ccId].GetRemainingCurrent()
 }
 
 // prepare publishes initial values

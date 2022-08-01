@@ -338,8 +338,8 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 		site.Circuits[ccId].PrintCircuits(0)
 	}
 	// connect circuits and lps
-	for lpId, _ := range loadPoints {
-		for ccId, _ := range site.Circuits {
+	for lpId := range loadPoints {
+		for ccId := range site.Circuits {
 			loadPoints[lpId].CircuitPtr = site.Circuits[ccId].GetCircuit(loadPoints[lpId].CircuitRef)
 			if loadPoints[lpId].CircuitPtr != nil {
 				loadPoints[lpId].CircuitPtr.GetRemainingCurrent()
