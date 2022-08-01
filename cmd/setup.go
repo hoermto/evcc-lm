@@ -315,17 +315,7 @@ func configureLoadPoints(conf config, cp *ConfigProvider) (loadPoints []*core.Lo
 }
 
 func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *ConfigProvider) (err error) {
-	ccInterfaces, ok := viper.AllSettings()["circuits"].([]interface{})
-	if !ok {
-		// no circuits configured
-		// in this case, check LPs dont have circuit references
-		for _, curLp := range loadPoints {
-			if len(curLp.CircuitRef) > 0 {
-				return fmt.Errorf("loadpoint %s uses circuit(s), but no circuits are defined", curLp.Title)
-			}
-		}
-		return nil
-	}
+	ccInterfaces, _ := viper.AllSettings()["circuits"].([]interface{})
 
 	for ccId, ccI := range ccInterfaces {
 		var ccMap map[string]interface{}
