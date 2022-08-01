@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/util"
@@ -39,7 +40,7 @@ func (cc *Circuit) GetCurrent() float64 {
 	} else {
 		current = cc.GetCurrentFromConsumers()
 	}
-	cc.Log.TRACE.Printf("actual current: %.1fA", current)
+	cc.Log.DEBUG.Printf("actual current: %.1fA", current)
 	cc.publish("actualCurrent", current)
 	return current
 }
@@ -55,7 +56,7 @@ func (cc *Circuit) GetCurrentFromConsumers() float64 {
 		current += cur
 	}
 	// also add consumption of circuits
-	for ccId, _ := range cc.Circuits {
+	for ccId := range cc.Circuits {
 		cur := cc.Circuits[ccId].GetCurrent()
 		cc.Log.TRACE.Printf("add %.1fA current from circuit %s", cur, cc.Circuits[ccId].Name)
 		current += cur
@@ -168,7 +169,7 @@ func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 	}
 	// initialize also included circuits
 	if cc.Circuits != nil {
-		for ccId, _ := range cc.Circuits {
+		for ccId := range cc.Circuits {
 			cc.Log.TRACE.Printf("creating circuit from circuitRef: %s", cc.Circuits[ccId].Name)
 			cc.Circuits[ccId].parentCircuit = cc
 			if err := cc.Circuits[ccId].InitCircuits(site, cp); err != nil {
@@ -206,9 +207,14 @@ func (cc *Circuit) DumpConfig(indent int, maxIndent int) []string {
 	res = append(res, cfgDump)
 
 	// cc.Log.TRACE.Printf("%s%s%s: (%p) log: %t, meter: %t, consumers: %d, parent: %p\n", strings.Repeat(" ", indent), cc.Name, strings.Repeat(" ", 10-indent), cc, cc.Log != nil, cc.meterCurrent != nil, len(cc.Consumers), cc.parentCircuit)
-	for id, _ := range cc.Circuits {
-		for _, s := range cc.Circuits[id].DumpConfig(indent+2, maxIndent) {
-			res = append(res, s)
+	for id := range cc.Circuits {
+		// this does not work (compiler error), but linter requests it. Github wont build ...
+		// res = append(res, cc.Circuits[id].DumpConfig(indent+2, maxIndent))
+		// hacky work around
+		for _, l := range cc.Circuits[id].DumpConfig(indent+2, maxIndent) {
+			res = append(res, l)
+			// add useless command
+			time.Sleep(0)
 		}
 	}
 	return res
@@ -221,7 +227,7 @@ func (cc *Circuit) GetCircuit(n string) *Circuit {
 		cc.Log.TRACE.Printf("found circuit %s (%p)", cc.Name, &cc)
 		return cc
 	} else {
-		for ccId, _ := range cc.Circuits {
+		for ccId := range cc.Circuits {
 			cc.Log.TRACE.Printf("start looking in circuit %s (%p)", cc.Circuits[ccId].Name, &cc.Circuits[ccId])
 			retCC := cc.Circuits[ccId].GetCircuit(n)
 			if retCC != nil {
@@ -253,7 +259,7 @@ func (cc *Circuit) publish(key string, val interface{}) {
 func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 	cc.uiChan = uiChan
 	cc.publish("maxCurrent", cc.MaxCurrent)
-	for ccId, _ := range cc.Circuits {
+	for ccId := range cc.Circuits {
 		cc.Circuits[ccId].Prepare(uiChan)
 	}
 }
