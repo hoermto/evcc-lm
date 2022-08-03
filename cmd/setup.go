@@ -317,7 +317,7 @@ func configureLoadPoints(conf config, cp *ConfigProvider) (loadPoints []*core.Lo
 func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *ConfigProvider) (err error) {
 	ccInterfaces, _ := viper.AllSettings()["circuits"].([]interface{})
 
-	for ccId, ccI := range ccInterfaces {
+	for _, ccI := range ccInterfaces {
 		var ccMap map[string]interface{}
 		if err := util.DecodeOther(ccI, &ccMap); err != nil {
 			return fmt.Errorf("failed decoding circuit configuration: %w", err)
@@ -328,9 +328,7 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 			return fmt.Errorf("failed configuring circuit: %w", err)
 		}
 
-		ccNew.PrintCircuits(0)
 		site.Circuits = append(site.Circuits, ccNew)
-		site.Circuits[ccId].PrintCircuits(0)
 	}
 	// connect circuits and lps
 	for lpId := range loadPoints {
