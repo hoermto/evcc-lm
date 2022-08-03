@@ -623,7 +623,7 @@ func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
 	if lp.CircuitPtr != nil && chargeCurrent > 0.0 {
 		maxCur := lp.CircuitPtr.GetRemainingCurrent()
 		// maxCur includes the consumption of this loadpoint, so adjust using consumer interface
-		newCur := maxCur + lp.effectiveCurrent()
+		newCur := maxCur + lp.GetCurrent()
 		// apply not more than requested. If too less current is available, make sure its not negative
 		chargeCurrentNew := math.Min(math.Max(newCur, 0.0), chargeCurrent)
 		// later here the function checks for having less than MinCurrent()
