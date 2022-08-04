@@ -327,7 +327,6 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 		if err != nil {
 			return fmt.Errorf("failed configuring circuit: %w", err)
 		}
-
 		site.Circuits = append(site.Circuits, ccNew)
 	}
 	// connect circuits and lps
@@ -335,8 +334,10 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 		for ccId := range site.Circuits {
 			loadPoints[lpId].CircuitPtr = site.Circuits[ccId].GetCircuit(loadPoints[lpId].CircuitRef)
 			if loadPoints[lpId].CircuitPtr != nil {
-				loadPoints[lpId].CircuitPtr.GetRemainingCurrent()
-				loadPoints[lpId].CircuitPtr.Consumers = append(loadPoints[lpId].CircuitPtr.Consumers, loadPoints[lpId])
+				// check there is a virtual meter, and add lp in case as consumer
+				if vmtr := loadPoints[lpId].CircuitPtr.GetVMeter(); vmtr != nil {
+					vmtr.AddConsumer(loadPoints[lpId])
+				}
 				break
 			}
 		}
@@ -345,5 +346,6 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 			return fmt.Errorf("loadpoint uses undefined circuit: %s", loadPoints[lpId].CircuitRef)
 		}
 	}
+
 	return nil
 }
