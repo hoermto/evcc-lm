@@ -12,8 +12,7 @@ type Consumer interface {
 }
 
 type VMeter struct {
-	Log    *util.Logger
-	uiChan chan<- util.Param
+	Log *util.Logger
 
 	Name      string
 	Consumers []Consumer // all consumers under management. Used for consumption evaluation

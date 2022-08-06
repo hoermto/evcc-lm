@@ -10,8 +10,6 @@ import (
 	"github.com/evcc-io/evcc/util"
 )
 
-var circuitNr = 0 // global counter for circuit id
-
 type Circuit struct {
 	Log    *util.Logger
 	uiChan chan<- util.Param
@@ -138,7 +136,7 @@ func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 	}
 	// initialize also included circuits
 	if cc.Circuits != nil {
-		for ccId, _ := range cc.Circuits {
+		for ccId := range cc.Circuits {
 			cc.Log.TRACE.Printf("creating circuit from circuitRef: %s", cc.Circuits[ccId].Name)
 			cc.Circuits[ccId].parentCircuit = cc
 			if err := cc.Circuits[ccId].InitCircuits(site, cp); err != nil {
