@@ -223,21 +223,25 @@ func (cc *Circuit) publish(key string, val interface{}) {
 		return
 	}
 
-	key = fmt.Sprintf("circuit-%s_%s", cc.Name, key)
-
 	cc.uiChan <- util.Param{
-		Key: key,
-		Val: val,
+		Circuit: &cc.Name,
+		Key:     key,
+		Val:     val,
 	}
 }
 
 // set the UI channel to publish information
 func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 	cc.uiChan = uiChan
-	if vm := cc.GetVMeter(); vm != nil {
-		vm.Prepare(uiChan)
-	}
+	cc.publish("name", cc.Name)
 	cc.publish("maxCurrent", cc.MaxCurrent)
+	if vmtr := cc.GetVMeter(); vmtr != nil {
+		cc.publish("virtualMeter", true)
+		cc.publish("consumers", len(vmtr.Consumers)-len(cc.Circuits))
+	} else {
+		cc.publish("virtualMeter", false)
+	}
+	// initialize sub circuits
 	for ccId := range cc.Circuits {
 		cc.Circuits[ccId].Prepare(uiChan)
 	}

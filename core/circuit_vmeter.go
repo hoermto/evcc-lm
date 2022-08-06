@@ -2,8 +2,6 @@
 package core
 
 import (
-	"fmt"
-
 	"github.com/evcc-io/evcc/util"
 )
 
@@ -29,7 +27,6 @@ func (vm *VMeter) AddConsumer(c Consumer) {
 // return current as it would be used on all 3 phases. We dont phase accurate evaluation for the installation.
 func (vm *VMeter) Currents() (float64, float64, float64, error) {
 	vm.Log.TRACE.Printf("get current from %d consumers", len(vm.Consumers))
-	vm.publish("consumers: ", len(vm.Consumers))
 	var currentTotal float64
 	for cID := range vm.Consumers {
 		if cur, err := vm.Consumers[cID].GetCurrent(); err == nil {
@@ -39,7 +36,6 @@ func (vm *VMeter) Currents() (float64, float64, float64, error) {
 			return 0.0, 0.0, 0.0, err
 		}
 	}
-	vm.publish("current", currentTotal)
 	return currentTotal, currentTotal, currentTotal, nil
 }
 
@@ -50,24 +46,4 @@ func NewVMeter(n string) *VMeter {
 		Log:  util.NewLogger("vmtr-" + n),
 	}
 	return vm
-}
-
-// publish sends values to UI and databases
-func (vm *VMeter) publish(key string, val interface{}) {
-	// test helper
-	if vm.uiChan == nil {
-		return
-	}
-
-	key = fmt.Sprintf("vmtr-%s_%s", vm.Name, key)
-
-	vm.uiChan <- util.Param{
-		Key: key,
-		Val: val,
-	}
-}
-
-// set the UI channel to publish information
-func (vm *VMeter) Prepare(uiChan chan<- util.Param) {
-	vm.uiChan = uiChan
 }
