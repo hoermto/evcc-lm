@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/cloudfoundry/jibber_jabber"
+	"github.com/evcc-io/evcc/core"
 	"github.com/evcc-io/evcc/hems/semp"
 	"github.com/evcc-io/evcc/server"
 	"github.com/evcc-io/evcc/util"
@@ -169,8 +171,9 @@ func (c *CmdConfigure) flowNewConfigFile() {
 	_ = c.configureDevices(DeviceCategoryBatteryMeter, true, true)
 	_ = c.configureDevices(DeviceCategoryVehicle, true, true)
 
-	c.configureLoadpoints()
 	c.configureSite()
+	c.configureCircuits()
+	c.configureLoadpoints()
 
 	// check if SMA HEMS is available and ask the user if it should be added
 	if c.capabilitySMAHems {
@@ -445,4 +448,90 @@ func (c *CmdConfigure) configureSite() {
 		required:     true,
 	})
 	c.configuration.config.Site.Title = siteTitle
+}
+
+// configureCircuits asks for circuits
+func (c *CmdConfigure) configureCircuits() {
+	fmt.Println()
+	fmt.Println(c.localizedString("Circuit_Setup", nil))
+
+	if !c.askYesNo(c.localizedString("Curcuit_Add", nil)) {
+		return
+	}
+
+	for {
+		ccName := c.askValue(question{
+			label:    c.localizedString("Circuit_Title", nil),
+			required: true,
+		})
+		curCircuit := *core.NewCircuit(ccName, 0, nil, util.NewLogger(("cc-" + ccName)))
+
+		curChoices := []string{
+			c.localizedString("Circuit_MaxCurrent16A", nil),  // 11kW
+			c.localizedString("Circuit_MaxCurrent25A", nil),  // 17kW
+			c.localizedString("Circuit_MaxCurrent35A", nil),  // 22kW
+			c.localizedString("Circuit_MaxCurrent50A", nil),  // 31kW
+			c.localizedString("Circuit_MaxCurrent63A", nil),  // 39kW
+			c.localizedString("Circuit_MaxCurrent80A", nil),  // 50kW
+			c.localizedString("Circuit_MaxCurrent100A", nil), // 62kW
+			c.localizedString("Circuit_MaxCurrentCustom", nil),
+		}
+		fmt.Println()
+		powerIndex, _ := c.askChoice(c.localizedString("Circuit_MaxCurrent", nil), curChoices)
+		switch powerIndex {
+		case 0:
+			curCircuit.MaxCurrent = 35.0
+		case 1:
+			curCircuit.MaxCurrent = 35.0
+		case 2:
+			curCircuit.MaxCurrent = 35.0
+		case 3:
+			curCircuit.MaxCurrent = 50.0
+		case 4:
+			curCircuit.MaxCurrent = 63.0
+		case 5:
+			curCircuit.MaxCurrent = 80.0
+		case 6:
+			curCircuit.MaxCurrent = 100.0
+		case 7:
+			amperage := c.askValue(question{
+				label:          c.localizedString("Circuit_MaxCurrentCustomInput", nil),
+				valueType:      templates.ParamValueTypeNumber,
+				minNumberValue: 0.0,
+				maxNumberValue: 1000, // 600kW ... enough?
+				required:       true})
+			curCircuit.MaxCurrent, _ = strconv.ParseFloat(amperage, 64)
+
+		}
+
+		// in case we have already circuits, ask for parent circuit
+		if len(c.configuration.config.CircuitNames) > 0 {
+			if c.askYesNo(c.localizedString("Curcuit_HasParent", nil)) {
+				sort.Strings(c.configuration.config.CircuitNames)
+				parentCCNameId, _ := c.askChoice(c.localizedString("Circuit_Parent", nil), c.configuration.config.CircuitNames)
+
+				// assign this circuit as child to the requested parent
+				for ccId := range c.configuration.config.Circuits {
+					if parentCC := c.configuration.config.Circuits[ccId].GetCircuit(c.configuration.config.CircuitNames[parentCCNameId]); parentCC != nil {
+						parentCC.Circuits = append(parentCC.Circuits, curCircuit)
+						break
+					}
+				}
+			} else {
+				// no parent,
+				// add as top level circuit
+				c.configuration.config.Circuits = append(c.configuration.config.Circuits, curCircuit)
+			}
+		} else {
+			// first circuit
+			c.configuration.config.Circuits = append(c.configuration.config.Circuits, curCircuit)
+		}
+		// append to known names
+		c.configuration.config.CircuitNames = append(c.configuration.config.CircuitNames, curCircuit.Name)
+
+		fmt.Println()
+		if !c.askYesNo(c.localizedString("Curcuit_AddAnother", nil)) {
+			break
+		}
+	}
 }
