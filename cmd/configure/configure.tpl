@@ -51,6 +51,32 @@ loadpoints:
 {{-   end }}
 {{- end }}
 
+circuits:
+{{-   range .Circuits }}
+- name: {{ .Name }}
+  maxCurrent: {{ .MaxCurrent }}
+  meter: {{ .MeterRef }}
+  circuits:
+{{-   range .Circuits }}
+    - name: {{ .Name }}
+      maxCurrent: {{ .MaxCurrent }}
+      meter: {{ .MeterRef }}
+      circuits:
+{{-   range .Circuits }}
+        - name: {{ .Name }}
+          maxCurrent: {{ .MaxCurrent }}
+          meter: {{ .MeterRef }}
+          circuits:
+{{-   range .Circuits }}
+            - name: {{ .Name }}
+              maxCurrent: {{ .MaxCurrent }}
+              meter: {{ .MeterRef }}
+              circuits:
+{{-   end }} 
+{{-   end }}
+{{-   end }}
+{{- end }}
+
 site:
   title: {{ .Site.Title }}
   meters:
