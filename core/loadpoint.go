@@ -613,11 +613,13 @@ func (lp *LoadPoint) syncCharger() {
 // setLimit applies charger current limits and enables/disables accordingly
 func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
 	// apply load management
+	forceCurrentChange := false
 	if lp.CircuitPtr != nil && chargeCurrent > 0.0 {
 		maxCur := lp.CircuitPtr.GetRemainingCurrent()
 		// maxCur includes the consumption of this loadpoint, so adjust using consumer interface
 		curAct, err := lp.GetCurrent()
 		if err != nil {
+			lp.log.ERROR.Printf("error getting current consumption: %s", err)
 			return err
 		}
 		newCur := maxCur + curAct
@@ -628,12 +630,12 @@ func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
 			lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit %s", chargeCurrent, chargeCurrentNew, lp.CircuitPtr.Name)
 			chargeCurrent = chargeCurrentNew
 			// also set force to ensure not overloading the circuit
-			force = true
+			forceCurrentChange = true
 		}
 	}
 
 	// set current
-	if chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent() {
+	if (chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent()) || forceCurrentChange {
 		var err error
 		if charger, ok := lp.charger.(api.ChargerEx); ok && !lp.vehicleHasFeature(api.CoarseCurrent) {
 			err = charger.MaxCurrentMillis(chargeCurrent)
