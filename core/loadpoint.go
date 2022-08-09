@@ -1132,8 +1132,16 @@ func (lp *LoadPoint) updateChargerStatus() error {
 func (lp *LoadPoint) GetCurrent() (float64, error) {
 	// using effective current in use.
 	// potential issue: slow LP might cause interference or overload
-	return lp.effectiveCurrent(), nil
+	if !lp.charging() {
+		return 0, nil
+	}
 
+	// adjust actual current for vehicles like Zoe where it remains below target
+	if lp.chargeCurrents != nil {
+		return lp.chargeCurrents[0], nil
+	}
+
+	return lp.chargeCurrent, nil
 	// alternatively use assigned current
 	// potential issue: LP in mode != "off" will always report their assigned current, but not real used
 	// if the vehicle remains in state "charging" but only uses 500W for Aircon, this might block 16A in the circuit
