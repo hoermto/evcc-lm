@@ -244,3 +244,12 @@ func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 		cc.Circuits[ccId].Prepare(uiChan)
 	}
 }
+
+// update gets called on every site update call.
+// used to publish the consumption
+func (cc *Circuit) update() {
+	_, _ = cc.GetCurrent()
+	for ccSub := range cc.Circuits {
+		cc.Circuits[ccSub].update()
+	}
+}

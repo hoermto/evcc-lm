@@ -517,10 +517,11 @@ func (site *Site) update(lp Updater) {
 	if telemetry.Enabled() && totalChargePower > standbyPower {
 		go telemetry.UpdateChargeProgress(site.log, totalChargePower, deltaCharged, deltaSelf)
 	}
-	
+
 	// update all circuits to refresh the data when no loadpoints are upated
 	for ccId := range site.Circuits {
-		site.Circuits[ccId].GetRemainingCurrent()
+		site.Circuits[ccId].update()
+	}
 }
 
 // prepare publishes initial values
