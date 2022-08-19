@@ -58,6 +58,9 @@ loadpoints:
   mincurrent: {{ .MinCurrent }}
   maxcurrent: {{ .MaxCurrent }}
   resetOnDisconnect: {{ .ResetOnDisconnect }}
+{{-     if .Circuit }}
+  circuit: {{ .Circuit }}
+{{-   end }}
 {{-   end }}
 {{- end }}
 
