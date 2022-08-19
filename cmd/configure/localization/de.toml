@@ -111,6 +111,8 @@ Loadpoint_Setup = "- Ladepunkt(e) einrichten"
 Loadpoint_Title = "Titel des Ladepunktes"
 Loadpoint_AddAnother = "Möchtest du einen weiteren Ladepunkt hinzufügen?"
 Loadpoint_DefaultTitle = "Garage"
+Loadpoint_CircuitYesNo = "Soll der Ladepunkt einem Stromkreis zugeordnet werden (für Lastmanagement)?"
+Loadpoint_Circuit = "Stromkreis auswählen:"
 
 Loadpoint_ResetOnDisconnect = "Soll beim Abstecken des Ladekables von einem Fahrzeug, die Lade-Standardeinstellungen wieder hergestellt werden?"
 
@@ -138,10 +140,10 @@ Site_Title = "Titel des Standortes"
 Site_DefaultTitle = "Mein Zuhause"
 
 Circuit_Setup = "Stromkreise einrichten"
-Curcuit_Add = "Sollen ein oder mehrere Stromkreise konfiguriert werden?"
-Curcuit_AddAnother = "Möchtest Du einen weiteren Stromkreis hinzufügen?"
+Circuit_Add = "Sollen ein oder mehrere Stromkreise konfiguriert werden?"
+Circuit_AddAnother = "Möchtest Du einen weiteren Stromkreis hinzufügen?"
 Circuit_Title = "Name des Stromkreises"
-Curcuit_HasParent = "Ist der Stromkreis Teil eines anderen Stromkreises?"
+Circuit_HasParent = "Ist der Stromkreis Teil eines anderen Stromkreises?"
 Circuit_Parent = "Stromkreis auswählen"
 
 Circuit_MaxCurrent = "Wie ist der maximale Strom im Stromkreis?"
