@@ -172,7 +172,9 @@ func (c *CmdConfigure) flowNewConfigFile() {
 	_ = c.configureDevices(DeviceCategoryVehicle, true, true)
 
 	c.configureSite()
-	c.configureCircuits()
+	if c.advancedMode {
+		c.configureCircuits()
+	}
 	c.configureLoadpoints()
 
 	// check if SMA HEMS is available and ask the user if it should be added
@@ -428,6 +430,12 @@ func (c *CmdConfigure) configureLoadpoints() {
 			label:     c.localizedString("Loadpoint_ResetOnDisconnect", nil),
 			valueType: templates.ParamValueTypeBool,
 		})
+
+		if len(c.configuration.config.CircuitNames) > 0 && c.askYesNo(c.localizedString("Loadpoint_CircuitYesNo", nil)) {
+			ccNameId, _ := c.askChoice(c.localizedString("Loadpoint_Circuit", nil), c.configuration.config.CircuitNames)
+			loadpoint.Circuit = c.configuration.config.CircuitNames[ccNameId]
+		}
+
 		c.configuration.AddLoadpoint(loadpoint)
 
 		fmt.Println()
@@ -455,7 +463,7 @@ func (c *CmdConfigure) configureCircuits() {
 	fmt.Println()
 	fmt.Println(c.localizedString("Circuit_Setup", nil))
 
-	if !c.askYesNo(c.localizedString("Curcuit_Add", nil)) {
+	if !c.askYesNo(c.localizedString("Circuit_Add", nil)) {
 		return
 	}
 
@@ -506,7 +514,7 @@ func (c *CmdConfigure) configureCircuits() {
 
 		// in case we have already circuits, ask for parent circuit
 		if len(c.configuration.config.CircuitNames) > 0 {
-			if c.askYesNo(c.localizedString("Curcuit_HasParent", nil)) {
+			if c.askYesNo(c.localizedString("Circuit_HasParent", nil)) {
 				sort.Strings(c.configuration.config.CircuitNames)
 				parentCCNameId, _ := c.askChoice(c.localizedString("Circuit_Parent", nil), c.configuration.config.CircuitNames)
 
@@ -530,7 +538,7 @@ func (c *CmdConfigure) configureCircuits() {
 		c.configuration.config.CircuitNames = append(c.configuration.config.CircuitNames, curCircuit.Name)
 
 		fmt.Println()
-		if !c.askYesNo(c.localizedString("Curcuit_AddAnother", nil)) {
+		if !c.askYesNo(c.localizedString("Circuit_AddAnother", nil)) {
 			break
 		}
 	}

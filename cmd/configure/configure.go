@@ -28,15 +28,17 @@ type loadpoint struct {
 	MaxCurrent        int
 	Phases            int
 	ResetOnDisconnect string
+	Circuit           string
 }
 
 type config struct {
-	Meters     []device
-	Chargers   []device
-	Vehicles   []device
-	Loadpoints []loadpoint
-	Circuits   []core.Circuit
-	Site       struct { // TODO Perspektivisch können wir was aus core wiederverwenden, für später
+	Meters       []device
+	Chargers     []device
+	Vehicles     []device
+	Loadpoints   []loadpoint
+	Circuits     []core.Circuit
+	CircuitNames []string // helper to remember a plain list of circuits to be used in loadpoint config
+	Site         struct { // TODO Perspektivisch können wir was aus core wiederverwenden, für später
 		Title     string
 		Grid      string
 		PVs       []string
