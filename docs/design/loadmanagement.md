@@ -27,6 +27,131 @@
 - isolation using interfaces
 - virtual meter for consistent circuit logic
 
+# Usage
+## Configuration
+Configuration assistant supports circuit creation in advanced mode, up to 4 levels in hierarchy. Manually there is no limit in circuit depth.
+
+## Example 1: all load points shall not use more than 25A
+- no load management for main circuit
+- max current is determined by load point consumption
+
+```
+circuits:
+- name: Garage
+    maxCurrent: 25
+    meter:
+    circuits:
+
+loadpoints:
+- title: Garage links
+  charger: wallbox5
+  mode: off
+  phases: 3
+  mincurrent: 6
+  maxcurrent: 16
+  resetOnDisconnect: false
+  circuit: Garage
+- title: Garage rechts
+  charger: wallbox6
+  mode: off
+  phases: 3
+  mincurrent: 6
+  maxcurrent: 16
+  resetOnDisconnect: false
+  circuit: Garage
+```
+
+## Example 2: secure main circuit, all load points shall not exceed 16A
+
+- main circuit is covered.
+- max current is determined by load point consumption
+
+```
+circuits:
+- name: main
+  maxCurrent: 35
+  meter: grid1
+  circuits:
+    - name: Garage
+      maxCurrent: 16
+      meter:
+      circuits:
+
+loadpoints:
+- title: Garage links
+  charger: wallbox5
+  mode: off
+  phases: 3
+  mincurrent: 6
+  maxcurrent: 16
+  resetOnDisconnect: false
+  circuit: Garage
+- title: Garage rechts
+  charger: wallbox6
+  mode: off
+  phases: 3
+  mincurrent: 6
+  maxcurrent: 16
+  resetOnDisconnect: false
+  circuit: Garage
+
+site:
+  title: Mein Zuhause
+  meters:
+    grid: grid1
+    pvs:
+    - pv2
+    batteries:
+    - battery3
+```
+
+## Example 3: secure main circuit, use series of load points with separate meter
+
+- main circuit is covered
+- consumption of loadpoints is determined using a dedicated meter in this circuit
+
+```
+meters:
+- type: template
+  template: eastron
+  id: 1
+  host: 1.2.3.4
+  port: 502
+  usage: grid
+  modbus: rs485tcpip
+  name: meter_aussen
+
+circuits:
+- name: main
+  maxCurrent: 63
+  meter: grid1
+  circuits:
+    - name: Parkplatz
+      maxCurrent: 35
+      meter: meter_aussen
+      circuits:
+
+loadpoints:
+- title: Parken 1
+  circuit: Parkplatz
+  ...
+- title: Parken 2
+  circuit: Parkplatz
+  ...
+- title: Parken 3
+  circuit: Parkplatz
+  ...
+- title: Parken 4
+  circuit: Parkplatz
+  ...
+
+site:
+  title: Arztpraxis Feelgood
+  meters:
+    grid: grid1
+```
+
+
 ## Implementation
 ### Circuit
 Using circuit struct with 
@@ -62,7 +187,7 @@ In case the remaining current is lower than `MinCurrent`, `SetLimit()` handles t
 - logs are using loggers with `cc-<ccname>`. Default would be `cc-<id>`, which I consider not user friendly.
 
 ## Tasks
-[ ] config assistant for circuits
+[x] config assistant for circuits
 
 [X] introduce virtual meters to handle circuits w/o real meters
 
