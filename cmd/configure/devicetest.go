@@ -130,6 +130,10 @@ func (d *DeviceTest) testMeter(deviceCategory DeviceCategory, v interface{}) (De
 			} else {
 				return DeviceTestResultInvalid, errors.New("selected device is not a battery meter")
 			}
+		} else if deviceCategory == DeviceCategoryCircuitMeter {
+			if _, ok := v.(api.MeterCurrent); !ok {
+				return DeviceTestResultInvalid, errors.New("selected does not provide phase currents")
+			}
 		}
 	} else {
 		return DeviceTestResultInvalid, errors.New("selected device is not a meter")
