@@ -10,6 +10,8 @@ import (
 	"github.com/evcc-io/evcc/util"
 )
 
+var gridMeterUsed bool // indicates gridmeter is used already fo a circuit to avoid > 1 usage
+
 type Circuit struct {
 	Log    *util.Logger
 	uiChan chan<- util.Param
@@ -118,8 +120,13 @@ func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 	if cc.MeterRef != "" {
 		var mtr api.Meter
 		if cc.MeterRef == site.Meters.GridMeterRef {
-			mtr = site.gridMeter
-			cc.Log.TRACE.Printf("add grid meter from site: %s", cc.MeterRef)
+			if !gridMeterUsed {
+				mtr = site.gridMeter
+				gridMeterUsed = true
+				cc.Log.TRACE.Printf("add grid meter from site: %s", cc.MeterRef)
+			} else {
+				return fmt.Errorf("grid meter used more in more than one circuit: %s", cc.MeterRef)
+			}
 		} else {
 			mtr, _ = cp.Meter(cc.MeterRef)
 			cc.Log.TRACE.Printf("add separate meter: %s", cc.MeterRef)
