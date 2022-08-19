@@ -125,6 +125,7 @@ func (c *CmdConfigure) flowSingleDevice(category DeviceCategory) {
 	// only consider the device categories that are marked for this flow
 	categoryChoices := []string{
 		DeviceCategories[DeviceCategoryGridMeter].title,
+		DeviceCategories[DeviceCategoryCircuitMeter].title,
 		DeviceCategories[DeviceCategoryPVMeter].title,
 		DeviceCategories[DeviceCategoryBatteryMeter].title,
 		DeviceCategories[DeviceCategoryChargeMeter].title,
@@ -510,6 +511,14 @@ func (c *CmdConfigure) configureCircuits() {
 				required:       true})
 			curCircuit.MaxCurrent, _ = strconv.ParseFloat(amperage, 64)
 
+		}
+
+		// check meter
+		if c.askYesNo(c.localizedString("Circuit_Meter", nil)) {
+			ccMeter, _, err := c.configureDeviceCategory(DeviceCategoryCircuitMeter)
+			if err == nil {
+				curCircuit.MeterRef = ccMeter.Name
+			}
 		}
 
 		// in case we have already circuits, ask for parent circuit
