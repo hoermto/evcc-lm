@@ -477,33 +477,39 @@ func (c *CmdConfigure) configureCircuits() {
 		curCircuit := *core.NewCircuit(ccName, 0, nil, util.NewLogger(("cc-" + ccName)))
 
 		curChoices := []string{
-			c.localizedString("Circuit_MaxCurrent16A", nil),  // 11kW
-			c.localizedString("Circuit_MaxCurrent25A", nil),  // 17kW
-			c.localizedString("Circuit_MaxCurrent35A", nil),  // 22kW
-			c.localizedString("Circuit_MaxCurrent50A", nil),  // 31kW
-			c.localizedString("Circuit_MaxCurrent63A", nil),  // 39kW
-			c.localizedString("Circuit_MaxCurrent80A", nil),  // 50kW
-			c.localizedString("Circuit_MaxCurrent100A", nil), // 62kW
+			c.localizedString("Circuit_MaxCurrent16A", nil),  // 11kVA
+			c.localizedString("Circuit_MaxCurrent20A", nil),  // 13kVA
+			c.localizedString("Circuit_MaxCurrent25A", nil),  // 17kVA
+			c.localizedString("Circuit_MaxCurrent32A", nil),  // 22kVA
+			c.localizedString("Circuit_MaxCurrent35A", nil),  // 24kVA
+			c.localizedString("Circuit_MaxCurrent50A", nil),  // 34kVA
+			c.localizedString("Circuit_MaxCurrent63A", nil),  // 43kVA
+			c.localizedString("Circuit_MaxCurrent80A", nil),  // 55kVA
+			c.localizedString("Circuit_MaxCurrent100A", nil), // 69kVA
 			c.localizedString("Circuit_MaxCurrentCustom", nil),
 		}
 		fmt.Println()
 		powerIndex, _ := c.askChoice(c.localizedString("Circuit_MaxCurrent", nil), curChoices)
 		switch powerIndex {
 		case 0:
-			curCircuit.MaxCurrent = 35.0
+			curCircuit.MaxCurrent = 16.0
 		case 1:
-			curCircuit.MaxCurrent = 35.0
+			curCircuit.MaxCurrent = 20.0
 		case 2:
-			curCircuit.MaxCurrent = 35.0
+			curCircuit.MaxCurrent = 25.0
 		case 3:
-			curCircuit.MaxCurrent = 50.0
+			curCircuit.MaxCurrent = 32.0
 		case 4:
-			curCircuit.MaxCurrent = 63.0
+			curCircuit.MaxCurrent = 35.0
 		case 5:
-			curCircuit.MaxCurrent = 80.0
+			curCircuit.MaxCurrent = 50.0
 		case 6:
-			curCircuit.MaxCurrent = 100.0
+			curCircuit.MaxCurrent = 63.0
 		case 7:
+			curCircuit.MaxCurrent = 80.0
+		case 8:
+			curCircuit.MaxCurrent = 100.0
+		case 9:
 			amperage := c.askValue(question{
 				label:          c.localizedString("Circuit_MaxCurrentCustomInput", nil),
 				valueType:      templates.ParamValueTypeNumber,
