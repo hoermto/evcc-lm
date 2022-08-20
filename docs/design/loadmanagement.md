@@ -38,9 +38,9 @@ Configuration assistant supports circuit creation in advanced mode, up to 4 leve
 ```
 circuits:
 - name: Garage
-    maxCurrent: 25
-    meter:
-    circuits:
+  maxCurrent: 25
+  meter:
+  circuits:
 
 loadpoints:
 - title: Garage links
@@ -72,10 +72,10 @@ circuits:
   maxCurrent: 35
   meter: grid1
   circuits:
-    - name: Garage
-      maxCurrent: 16
-      meter:
-      circuits:
+  - name: Garage
+    maxCurrent: 16
+    meter:
+    circuits:
 
 loadpoints:
 - title: Garage links
@@ -126,10 +126,10 @@ circuits:
   maxCurrent: 63
   meter: grid1
   circuits:
-    - name: Parkplatz
-      maxCurrent: 35
-      meter: meter_aussen
-      circuits:
+  - name: Parkplatz
+    maxCurrent: 35
+    meter: meter_aussen
+    circuits:
 
 loadpoints:
 - title: Parken 1
