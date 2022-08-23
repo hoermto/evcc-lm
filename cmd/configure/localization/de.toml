@@ -128,7 +128,7 @@ Circuit_Meter = "Haben sie einen Stromzähler für diesen Stromkreis?"
 
 Circuit_MaxCurrent = "Wie hoch ist der maximal zulässige Phasenstrom im Stromkreis?"
 Circuit_MaxCurrent16A = "16A (max. 11 kVA)"
-Circuit_MaxCurrent25A = "20A (max. 13,8 kVA)"
+Circuit_MaxCurrent20A = "20A (max. 13,8 kVA)"
 Circuit_MaxCurrent25A = "25A (max. 17,2 kVA)"
 Circuit_MaxCurrent32A = "32A (max. 22 kVA)"
 Circuit_MaxCurrent35A = "35A (max. 24 kVA)"
