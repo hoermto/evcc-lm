@@ -104,11 +104,9 @@ func Execute() {
 func runRoot(cmd *cobra.Command, args []string) {
 	// load config and re-configure logging after reading config file
 	var err error
-	if cfgErr := loadConfigFile(&conf); errors.As(cfgErr, &viper.ConfigFileNotFoundError{}) {
+	if err := loadConfigFile(&conf); errors.As(err, &viper.ConfigFileNotFoundError{}) {
 		log.INFO.Println("missing config file - switching into demo mode")
 		demoConfig(&conf)
-	} else {
-		err = cfgErr
 	}
 
 	// network config

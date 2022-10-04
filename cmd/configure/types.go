@@ -60,7 +60,7 @@ var DeviceCategories = map[DeviceCategory]DeviceCategoryData{
 		defaultName:    defaultNameGridMeter,
 	},
 	DeviceCategoryCircuitMeter: {
-		class:          DeviceClassMeter,
+		class:          templates.Meter,
 		categoryFilter: DeviceCategoryGridMeter, // grid meters are good as selection for circuit meters
 		defaultName:    defaultNameCircuitMeter,
 	},
