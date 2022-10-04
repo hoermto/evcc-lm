@@ -128,7 +128,7 @@ func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 				return fmt.Errorf("grid meter used more in more than one circuit: %s", cc.MeterRef)
 			}
 		} else {
-			mtr = cp.Meter(cc.MeterRef)
+			mtr, _ = cp.Meter(cc.MeterRef)
 			cc.Log.TRACE.Printf("add separate meter: %s", cc.MeterRef)
 		}
 		if mc, ok := mtr.(api.MeterCurrent); ok {
