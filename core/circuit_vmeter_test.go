@@ -12,7 +12,7 @@ type testConsumerVM struct {
 }
 
 // interface consumer
-func (tc *testConsumerVM) GetCurrent() (float64, error) {
+func (tc *testConsumerVM) MaxPhasesCurrent() (float64, error) {
 	return tc.cur, nil
 }
 
@@ -23,16 +23,12 @@ func TestVMeter(t *testing.T) {
 
 	var consumers []*testConsumerVM // internal access for testing
 	for consId := 0; consId < 2; consId++ {
-		cons := &testConsumerVM{
-			cur: 0.0,
-		}
+		cons := &testConsumerVM{}
 		vm.Consumers = append(vm.Consumers, cons)
 		consumers = append(consumers, cons)
 	}
 
-	var cur1 float64
-	var cur2 float64
-	var cur3 float64
+	var cur1, cur2, cur3 float64
 
 	// no LP is consuming
 	cur1, _, _, _ = vm.Currents()

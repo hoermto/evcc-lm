@@ -177,7 +177,7 @@ The load points hold a optional reference to one circuit. The cicuit is used to 
 
 ## Operation
 The circuits are generally passive. On `SetLimit()` of a load point the load point checks the circuit for the remaining current at the beginning and adjusts this if its lower than the requested current.
-Since the circuit has the total consumption as base for the remaining current, the returned value includes the current consumption of this load point already. Load point adjusts the remaining current using the consumer interface `GetCurrent()`.
+Since the circuit has the total consumption as base for the remaining current, the returned value includes the current consumption of this load point already. Load point adjusts the remaining current using the consumer interface `MaxPhasesCurrent()`.
 
 In case the remaining current is lower than `MinCurrent`, `SetLimit()` handles this already in the following code.
 

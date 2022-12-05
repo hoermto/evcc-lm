@@ -516,7 +516,6 @@ func (c *CmdConfigure) configureCircuits() {
 			amperage := c.askValue(question{
 				label:          c.localizedString("Circuit_MaxCurrentCustomInput", nil),
 				valueType:      templates.ParamValueTypeNumber,
-				minNumberValue: 0.0,
 				maxNumberValue: 1000, // 600kW ... enough?
 				required:       true})
 			curCircuit.MaxCurrent, _ = strconv.ParseFloat(amperage, 64)

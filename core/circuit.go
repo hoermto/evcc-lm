@@ -13,138 +13,136 @@ import (
 var gridMeterUsed bool // indicates gridmeter is used already fo a circuit to avoid > 1 usage
 
 type Circuit struct {
-	Log    *util.Logger
+	log    *util.Logger
 	uiChan chan<- util.Param
 
-	Name       string    `mapstructure:"name"`       // meaningful name
+	Name       string    `mapstructure:"name"`       // meaningful name, used as reference in lp
 	MaxCurrent float64   `mapstructure:"maxCurrent"` // the max allowed current of this circuit
 	MeterRef   string    `mapstructure:"meter"`      // Charge meter reference
 	Circuits   []Circuit `mapstructure:"circuits"`   // sub circuits as config reference
 
 	parentCircuit *Circuit         // parent circuit reference
-	meterCurrent  api.MeterCurrent // meter to determine phase current
+	phaseMeter    api.MeterCurrent // meter to determine phase current
 	vMeter        *VMeter          // virtual meter if no real meter is used
 }
 
-// determines current in use.
-// implement consumer interface
+// GetCurrent determines current in use. Implements consumer interface
 // TBD: phase perfect evaluation
-func (cc *Circuit) GetCurrent() (float64, error) {
-	if cc.meterCurrent == nil {
-		cc.Log.ERROR.Println("meterCurrent is nil")
-		return 0.0, fmt.Errorf("no meter available")
-	}
-
+func (cc *Circuit) MaxPhasesCurrent() (float64, error) {
 	var current float64
-	var err error
-	i1, i2, i3, err := cc.meterCurrent.Currents()
-	if err == nil {
-		cc.Log.DEBUG.Printf("meter currents: %.3gA", []float64{i1, i2, i3})
-		cc.publish("meterCurrents", []float64{i1, i2, i3})
-		// TODO: phase adjusted handling. Currently we take highest current from all phases
-		current = math.Max(math.Max(i1, i2), i3)
-	} else {
-		cc.Log.ERROR.Println(fmt.Errorf("grid meter currents: %v", err))
-		return 0.0, fmt.Errorf("error getting meter currents: %v", err)
-	}
 
-	cc.Log.DEBUG.Printf("actual current: %.1fA", current)
+	i1, i2, i3, err := cc.phaseMeter.Currents()
+	if err != nil {
+		return 0, fmt.Errorf("failed getting meter currents: %w", err)
+	}
+	cc.log.DEBUG.Printf("meter currents: %.3gA", []float64{i1, i2, i3})
+	cc.publish("meterCurrents", []float64{i1, i2, i3})
+	// TODO: phase adjusted handling. Currently we take highest current from all phases
+	current = math.Max(math.Max(i1, i2), i3)
+
+	cc.log.DEBUG.Printf("actual current: %.1fA", current)
 	cc.publish("actualCurrent", current)
 	return current, nil
 }
 
-// returns avaialble current based on limit and consumption
-// todo: GetRemainingCurrent
+// GetRemainingCurrent avaialble current based on limit and consumption
+// checks down up to top level parent
 func (cc *Circuit) GetRemainingCurrent() float64 {
-	cc.Log.TRACE.Printf("get available current")
+	cc.log.TRACE.Printf("get available current")
 	// first update current current, mainly to regularly publish the value
-	current, _ := cc.GetCurrent()
+	current, err := cc.MaxPhasesCurrent()
+	if err != nil {
+		cc.log.WARN.Printf("failure getting max phase currents")
+		return 0
+	}
 	curAvailable := cc.MaxCurrent - current
 	if curAvailable < 0.0 {
-		cc.Log.WARN.Printf("overload detected (%s) - currents: %.1fA, allowed max current is: %.1fA\n", cc.Name, current, cc.MaxCurrent)
+		cc.log.WARN.Printf("overload detected (%s) - currents: %.1fA, allowed max current is: %.1fA\n", cc.Name, current, cc.MaxCurrent)
 		cc.publish("overload", true)
 	} else {
 		cc.publish("overload", false)
 	}
 	// check parent circuit, return lowest
 	if cc.parentCircuit != nil {
-		cc.Log.TRACE.Printf("get available current from parent: %s", cc.parentCircuit.Name)
+		cc.log.TRACE.Printf("get available current from parent: %s", cc.parentCircuit.Name)
 		curAvailable = math.Min(curAvailable, cc.parentCircuit.GetRemainingCurrent())
 	}
-	cc.Log.DEBUG.Printf("circuit using %.1fA, %.1fA available", current, curAvailable)
+	cc.log.DEBUG.Printf("circuit using %.1fA, %.1fA available", current, curAvailable)
 	return curAvailable
 }
 
-// creates a circuit with defaults
+// NewCircuit a circuit with defaults
 func NewCircuit(n string, limit float64, mc api.MeterCurrent, l *util.Logger) *Circuit {
 	cc := &Circuit{
-		Name:         n,
-		Log:          l,
-		MaxCurrent:   limit,
-		meterCurrent: mc,
+		Name:       n,
+		log:        l,
+		MaxCurrent: limit,
+		phaseMeter: mc,
 	}
 	return cc
 }
 
-// creates circuit from config
+// NewCircuitFromConfig creates circuit from config
 // using site to get access to the grid meter if configured, see cp.Meter() for details
 func NewCircuitFromConfig(cp configProvider, other map[string]interface{}, site *Site) (*Circuit, error) {
-	cc := NewCircuit("", 0, nil, nil)
-	if err := util.DecodeOther(other, cc); err != nil {
+	var circuit = new(Circuit)
+	if err := util.DecodeOther(other, circuit); err != nil {
 		return nil, err
 	}
 
-	cc.Log = util.NewLogger("cc-" + cc.Name)
-	cc.Log.TRACE.Println("NewCircuitFromConfig()")
-	cc.PrintCircuits(0)
-	if err := cc.InitCircuits(site, cp); err != nil {
+	circuit.log = util.NewLogger("cc-" + circuit.Name)
+	circuit.log.TRACE.Println("NewCircuitFromConfig()")
+	circuit.PrintCircuits(0) // for tracing only
+	if err := circuit.InitCircuits(site, cp); err != nil {
 		return nil, err
 	}
-	cc.PrintCircuits(0)
-	cc.Log.TRACE.Printf("created new circuit: %s, limit: %.1fA", cc.Name, cc.MaxCurrent)
-	if cc.Log == nil {
-		fmt.Println("log is nil")
-	}
-	cc.Log.TRACE.Println("NewCircuitFromConfig()) end")
-	return cc, nil
+	circuit.PrintCircuits(0) // for tracing only
+	circuit.log.TRACE.Printf("created new circuit: %s, limit: %.1fA", circuit.Name, circuit.MaxCurrent)
+	circuit.log.TRACE.Println("NewCircuitFromConfig()) end")
+	return circuit, nil
 }
 
-// circuits are recursive, so initialize meters also recursive
+// InitCircuits initializes circuits in hierarchy incl meters
 func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 	if cc.Name == "" {
 		return fmt.Errorf("circuit name must not be empty")
 	}
 
-	cc.Log = util.NewLogger("cc-" + cc.Name)
-	cc.Log.TRACE.Printf("InitCircuits(): %s (%p)", cc.Name, cc)
+	cc.log = util.NewLogger("cc-" + cc.Name)
+	cc.log.TRACE.Printf("InitCircuits(): %s (%p)", cc.Name, cc)
 	if cc.MeterRef != "" {
-		var mtr api.Meter
+		var (
+			mt  api.Meter
+			err error
+		)
 		if cc.MeterRef == site.Meters.GridMeterRef {
-			if !gridMeterUsed {
-				mtr = site.gridMeter
-				gridMeterUsed = true
-				cc.Log.TRACE.Printf("add grid meter from site: %s", cc.MeterRef)
-			} else {
+			if gridMeterUsed {
 				return fmt.Errorf("grid meter used more in more than one circuit: %s", cc.MeterRef)
 			}
+			mt = site.gridMeter
+			gridMeterUsed = true
+			cc.log.TRACE.Printf("add grid meter from site: %s", cc.MeterRef)
 		} else {
-			mtr, _ = cp.Meter(cc.MeterRef)
-			cc.Log.TRACE.Printf("add separate meter: %s", cc.MeterRef)
+			mt, err = cp.Meter(cc.MeterRef)
+			if err != nil {
+				return fmt.Errorf("failed to set meter %s: %w", cc.MeterRef, err)
+			}
+			cc.log.TRACE.Printf("add separate meter: %s", cc.MeterRef)
 		}
-		if mc, ok := mtr.(api.MeterCurrent); ok {
-			cc.meterCurrent = mc
+		if pm, ok := mt.(api.MeterCurrent); ok {
+			cc.phaseMeter = pm
 		} else {
 			return fmt.Errorf("circuit needs meter with phase current support: %s", cc.MeterRef)
 		}
 	} else {
 		// create virtual meter
 		cc.vMeter = NewVMeter(cc.Name)
-		cc.meterCurrent = cc.vMeter
+		cc.phaseMeter = cc.vMeter
 	}
 	// initialize also included circuits
 	if cc.Circuits != nil {
 		for ccId := range cc.Circuits {
-			cc.Log.TRACE.Printf("creating circuit from circuitRef: %s", cc.Circuits[ccId].Name)
+			cc.log.TRACE.Printf("creating circuit from circuitRef: %s", cc.Circuits[ccId].Name)
 			cc.Circuits[ccId].parentCircuit = cc
 			if err := cc.Circuits[ccId].InitCircuits(site, cp); err != nil {
 				return err
@@ -155,24 +153,27 @@ func (cc *Circuit) InitCircuits(site *Site, cp configProvider) error {
 			cc.Circuits[ccId].PrintCircuits(0)
 		}
 	} else {
-		cc.Log.TRACE.Printf("no sub circuits")
+		cc.log.TRACE.Printf("no sub circuits")
 	}
-	cc.Log.TRACE.Println("InitCircuits() exit")
-	cc.Log.INFO.Printf("initialized new circuit: %s, limit: %.1fA", cc.Name, cc.MaxCurrent)
+	cc.log.TRACE.Println("InitCircuits() exit")
+	cc.log.INFO.Printf("initialized new circuit: %s, limit: %.1fA", cc.Name, cc.MaxCurrent)
 	return nil
 }
 
+// GetVMeter returns the meter used in circuit
 func (cc *Circuit) GetVMeter() *VMeter {
 	return cc.vMeter
 }
 
+// PrintCircuits dumps recursively circuit config
 // trace output of circuit and subcircuits
 func (cc *Circuit) PrintCircuits(indent int) {
 	for _, s := range cc.DumpConfig(0, 15) {
-		cc.Log.TRACE.Println(s)
+		cc.log.TRACE.Println(s)
 	}
 }
 
+// DumpConfig dumps the current circuit
 // returns string array to dump the config
 func (cc *Circuit) DumpConfig(indent int, maxIndent int) []string {
 
@@ -201,23 +202,23 @@ func (cc *Circuit) DumpConfig(indent int, maxIndent int) []string {
 	return res
 }
 
-// returns the circiut with given name, checking all subcircuits
+// GetCircuit returns the circiut with given name, checking all subcircuits
 func (cc *Circuit) GetCircuit(n string) *Circuit {
-	cc.Log.TRACE.Printf("searching for circuit %s in %s", n, cc.Name)
+	cc.log.TRACE.Printf("searching for circuit %s in %s", n, cc.Name)
 	if cc.Name == n {
-		cc.Log.TRACE.Printf("found circuit %s (%p)", cc.Name, &cc)
+		cc.log.TRACE.Printf("found circuit %s (%p)", cc.Name, &cc)
 		return cc
 	} else {
 		for ccId := range cc.Circuits {
-			cc.Log.TRACE.Printf("start looking in circuit %s (%p)", cc.Circuits[ccId].Name, &cc.Circuits[ccId])
+			cc.log.TRACE.Printf("start looking in circuit %s (%p)", cc.Circuits[ccId].Name, &cc.Circuits[ccId])
 			retCC := cc.Circuits[ccId].GetCircuit(n)
 			if retCC != nil {
-				cc.Log.TRACE.Printf("found circuit %s (%p)", retCC.Name, &retCC)
+				cc.log.TRACE.Printf("found circuit %s (%p)", retCC.Name, &retCC)
 				return retCC
 			}
 		}
 	}
-	cc.Log.INFO.Printf("could not find circuit %s", n)
+	cc.log.INFO.Printf("could not find circuit %s", n)
 	return nil
 }
 
@@ -235,7 +236,7 @@ func (cc *Circuit) publish(key string, val interface{}) {
 	}
 }
 
-// set the UI channel to publish information
+// Prepare set the UI channel to publish information
 func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 	cc.uiChan = uiChan
 	cc.publish("name", cc.Name)
@@ -253,9 +254,9 @@ func (cc *Circuit) Prepare(uiChan chan<- util.Param) {
 }
 
 // update gets called on every site update call.
-// used to publish the consumption
+// this is used to update the current consumption etc to get published in status and databases
 func (cc *Circuit) update() {
-	_, _ = cc.GetCurrent()
+	_, _ = cc.MaxPhasesCurrent()
 	for ccSub := range cc.Circuits {
 		cc.Circuits[ccSub].update()
 	}

@@ -312,20 +312,21 @@ func configureLoadPoints(conf config, cp *ConfigProvider) (loadPoints []*core.Lo
 	return loadPoints, nil
 }
 
+// configureCircuits loads circuit definition and connects the lp with the circuit
 func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *ConfigProvider) (err error) {
 	ccInterfaces, _ := viper.AllSettings()["circuits"].([]interface{})
 
-	for _, ccI := range ccInterfaces {
-		var ccMap map[string]interface{}
-		if err := util.DecodeOther(ccI, &ccMap); err != nil {
+	for _, circuit := range ccInterfaces {
+		var circuitc map[string]interface{}
+		if err := util.DecodeOther(circuit, &circuitc); err != nil {
 			return fmt.Errorf("failed decoding circuit configuration: %w", err)
 		}
 
-		ccNew, err := core.NewCircuitFromConfig(cp, ccMap, site)
+		circuit, err := core.NewCircuitFromConfig(cp, circuitc, site)
 		if err != nil {
 			return fmt.Errorf("failed configuring circuit: %w", err)
 		}
-		site.Circuits = append(site.Circuits, ccNew)
+		site.Circuits = append(site.Circuits, circuit)
 	}
 	// connect circuits and lps
 	for lpId := range loadPoints {
@@ -338,9 +339,11 @@ func configureCircuits(site *core.Site, loadPoints []*core.LoadPoint, cp *Config
 				}
 				break
 			}
+			// error will be checked below. There might be multiple top level circuits
+			// which need to be checked before raising errors
 		}
+		// if we are here, no circuit with this name exists
 		if loadPoints[lpId].CircuitRef != "" && loadPoints[lpId].CircuitPtr == nil {
-			// if we are here, no circuit with this name exists
 			return fmt.Errorf("loadpoint uses undefined circuit: %s", loadPoints[lpId].CircuitRef)
 		}
 	}

@@ -259,9 +259,9 @@ func (site *Site) DumpConfig() {
 		}
 	}
 	site.log.INFO.Printf("circuits:")
-	for id := range site.Circuits {
-		for _, s := range site.Circuits[id].DumpConfig(2, 13) {
-			site.log.INFO.Printf(s)
+	for _, circuit := range site.Circuits {
+		for _, subCircuit := range circuit.DumpConfig(2, 13) {
+			site.log.INFO.Printf(subCircuit)
 		}
 	}
 

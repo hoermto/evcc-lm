@@ -624,14 +624,14 @@ func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
 	if lp.CircuitPtr != nil && chargeCurrent > 0.0 {
 		maxCur := lp.CircuitPtr.GetRemainingCurrent()
 		// maxCur includes the consumption of this loadpoint, so adjust using consumer interface
-		curAct, err := lp.GetCurrent()
+		curAct, err := lp.MaxPhasesCurrent()
 		if err != nil {
 			lp.log.ERROR.Printf("error getting current consumption: %s", err)
 			return err
 		}
 		newCur := maxCur + curAct
 		// apply not more than requested. If too less current is available, make sure its not negative
-		chargeCurrentNew := math.Min(math.Max(newCur, 0.0), chargeCurrent)
+		chargeCurrentNew := math.Min(math.Max(newCur, 0), chargeCurrent)
 		// later here the function checks for having less than MinCurrent()
 		if chargeCurrentNew < chargeCurrent {
 			lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit %s", chargeCurrent, chargeCurrentNew, lp.CircuitPtr.Name)
@@ -1152,7 +1152,7 @@ func (lp *LoadPoint) updateChargerStatus() error {
 }
 
 // implements interface Consumer, redirects to effectiveCurrent
-func (lp *LoadPoint) GetCurrent() (float64, error) {
+func (lp *LoadPoint) MaxPhasesCurrent() (float64, error) {
 	// using effective current in use.
 	// potential issue: slow LP might cause interference or overload
 	if !lp.charging() {

@@ -30,7 +30,7 @@ func TestCurrentCircuitMeter(t *testing.T) {
 	var curAv float64
 	var err error
 	// no consumption
-	curAv, err = circ.GetCurrent()
+	curAv, err = circ.MaxPhasesCurrent()
 	assert.Equal(t, curAv, 0.0)
 	assert.Nil(t, err)
 
@@ -65,8 +65,8 @@ func TestParentCircuitHierarchy(t *testing.T) {
 	circSub.parentCircuit = circMain
 
 	assert.NotNilf(t, circSub.parentCircuit, "parent circuit not set")
-	assert.NotNilf(t, circSub.meterCurrent, "sub circuit meter not set")
-	curAv, err := circSub.GetCurrent()
+	assert.NotNilf(t, circSub.phaseMeter, "sub circuit meter not set")
+	curAv, err := circSub.MaxPhasesCurrent()
 	assert.Equal(t, curAv, 10.0)
 	assert.Nil(t, err)
 
