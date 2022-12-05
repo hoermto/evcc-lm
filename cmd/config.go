@@ -165,12 +165,11 @@ func (cp *ConfigProvider) Meter(name string) (api.Meter, error) {
 }
 
 // Circuit provides circuits by name
-func (cp *ConfigProvider) Circuit(name string) *core.Circuit {
+func (cp *ConfigProvider) Circuit(name string) (*core.Circuit, error) {
 	if cc, ok := cp.circuits[name]; ok {
-		return &cc
+		return &cc, nil
 	}
-	log.FATAL.Fatalf("invalid circuit: %s", name)
-	return nil
+	return nil, fmt.Errorf("invalid circuit: %s", name)
 }
 
 // Charger provides chargers by name

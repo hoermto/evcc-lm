@@ -40,6 +40,9 @@ type CmdConfigure struct {
 	errItemNotPresent, errDeviceNotValid error
 
 	capabilitySMAHems bool
+
+	CircuitNames []string // helper to remember a plain list of circuits to be used in loadpoint config
+
 }
 
 // Run starts the interactive configuration
@@ -433,9 +436,9 @@ func (c *CmdConfigure) configureLoadpoints() {
 			valueType: templates.ParamValueTypeBool,
 		})
 
-		if len(c.configuration.config.CircuitNames) > 0 && c.askYesNo(c.localizedString("Loadpoint_CircuitYesNo", nil)) {
-			ccNameId, _ := c.askChoice(c.localizedString("Loadpoint_Circuit", nil), c.configuration.config.CircuitNames)
-			loadpoint.Circuit = c.configuration.config.CircuitNames[ccNameId]
+		if len(c.CircuitNames) > 0 && c.askYesNo(c.localizedString("Loadpoint_CircuitYesNo", nil)) {
+			ccNameId, _ := c.askChoice(c.localizedString("Loadpoint_Circuit", nil), c.CircuitNames)
+			loadpoint.Circuit = c.CircuitNames[ccNameId]
 		}
 
 		c.configuration.AddLoadpoint(loadpoint)
@@ -517,7 +520,6 @@ func (c *CmdConfigure) configureCircuits() {
 				maxNumberValue: 1000, // 600kW ... enough?
 				required:       true})
 			curCircuit.MaxCurrent, _ = strconv.ParseFloat(amperage, 64)
-
 		}
 
 		// check meter
@@ -529,14 +531,14 @@ func (c *CmdConfigure) configureCircuits() {
 		}
 
 		// in case we have already circuits, ask for parent circuit
-		if len(c.configuration.config.CircuitNames) > 0 {
+		if len(c.CircuitNames) > 0 {
 			if c.askYesNo(c.localizedString("Circuit_HasParent", nil)) {
-				sort.Strings(c.configuration.config.CircuitNames)
-				parentCCNameId, _ := c.askChoice(c.localizedString("Circuit_Parent", nil), c.configuration.config.CircuitNames)
+				sort.Strings(c.CircuitNames)
+				parentCCNameId, _ := c.askChoice(c.localizedString("Circuit_Parent", nil), c.CircuitNames)
 
 				// assign this circuit as child to the requested parent
 				for ccId := range c.configuration.config.Circuits {
-					if parentCC := c.configuration.config.Circuits[ccId].GetCircuit(c.configuration.config.CircuitNames[parentCCNameId]); parentCC != nil {
+					if parentCC := c.configuration.config.Circuits[ccId].GetCircuit(c.CircuitNames[parentCCNameId]); parentCC != nil {
 						parentCC.Circuits = append(parentCC.Circuits, curCircuit)
 						break
 					}
@@ -551,7 +553,7 @@ func (c *CmdConfigure) configureCircuits() {
 			c.configuration.config.Circuits = append(c.configuration.config.Circuits, curCircuit)
 		}
 		// append to known names
-		c.configuration.config.CircuitNames = append(c.configuration.config.CircuitNames, curCircuit.Name)
+		c.CircuitNames = append(c.CircuitNames, curCircuit.Name)
 
 		fmt.Println()
 		if !c.askYesNo(c.localizedString("Circuit_AddAnother", nil)) {
