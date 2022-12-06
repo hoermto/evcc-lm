@@ -538,7 +538,7 @@ func (c *CmdConfigure) configureCircuits() {
 				// assign this circuit as child to the requested parent
 				for ccId := range c.configuration.config.Circuits {
 					if parentCC := c.configuration.config.Circuits[ccId].GetCircuit(c.CircuitNames[parentCCNameId]); parentCC != nil {
-						parentCC.Circuits = append(parentCC.Circuits, curCircuit)
+						parentCC.Circuits = append(parentCC.Circuits, &curCircuit)
 						break
 					}
 				}

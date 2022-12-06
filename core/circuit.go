@@ -16,10 +16,10 @@ type Circuit struct {
 	log    *util.Logger
 	uiChan chan<- util.Param
 
-	Name       string    `mapstructure:"name"`       // meaningful name, used as reference in lp
-	MaxCurrent float64   `mapstructure:"maxCurrent"` // the max allowed current of this circuit
-	MeterRef   string    `mapstructure:"meter"`      // Charge meter reference
-	Circuits   []Circuit `mapstructure:"circuits"`   // sub circuits as config reference
+	Name       string     `mapstructure:"name"`       // meaningful name, used as reference in lp
+	MaxCurrent float64    `mapstructure:"maxCurrent"` // the max allowed current of this circuit
+	MeterRef   string     `mapstructure:"meter"`      // Charge meter reference
+	Circuits   []*Circuit `mapstructure:"circuits"`   // sub circuits as config reference
 
 	parentCircuit *Circuit         // parent circuit reference
 	phaseMeter    api.MeterCurrent // meter to determine phase current
@@ -148,7 +148,7 @@ func (circuit *Circuit) InitCircuits(site *Site, cp configProvider) error {
 				return err
 			}
 			if vmtr := circuit.GetVMeter(); vmtr != nil {
-				vmtr.AddConsumer(&circuit.Circuits[ccId])
+				vmtr.AddConsumer(circuit.Circuits[ccId])
 			}
 			circuit.Circuits[ccId].PrintCircuits(0)
 		}
@@ -189,11 +189,11 @@ func (circuit *Circuit) DumpConfig(indent int, maxIndent int) []string {
 	res = append(res, cfgDump)
 
 	// cc.Log.TRACE.Printf("%s%s%s: (%p) log: %t, meter: %t, parent: %p\n", strings.Repeat(" ", indent), cc.Name, strings.Repeat(" ", 10-indent), cc, cc.Log != nil, cc.meterCurrent != nil, cc.parentCircuit)
-	for id := range circuit.Circuits {
+	for _, subCircuit := range circuit.Circuits {
 		// this does not work (compiler error), but linter requests it. Github wont build ...
 		// res = append(res, cc.Circuits[id].DumpConfig(indent+2, maxIndent))
 		// hacky work around
-		for _, l := range circuit.Circuits[id].DumpConfig(indent+2, maxIndent) {
+		for _, l := range subCircuit.DumpConfig(indent+2, maxIndent) {
 			res = append(res, l)
 			// add useless command
 			time.Sleep(0)
@@ -209,9 +209,9 @@ func (circuit *Circuit) GetCircuit(n string) *Circuit {
 		circuit.log.TRACE.Printf("found circuit %s (%p)", circuit.Name, &circuit)
 		return circuit
 	} else {
-		for ccId := range circuit.Circuits {
-			circuit.log.TRACE.Printf("start looking in circuit %s (%p)", circuit.Circuits[ccId].Name, &circuit.Circuits[ccId])
-			retCC := circuit.Circuits[ccId].GetCircuit(n)
+		for _, subCircuit := range circuit.Circuits {
+			circuit.log.TRACE.Printf("start looking in circuit %s (%p)", subCircuit.Name, &subCircuit)
+			retCC := subCircuit.GetCircuit(n)
 			if retCC != nil {
 				circuit.log.TRACE.Printf("found circuit %s (%p)", retCC.Name, &retCC)
 				return retCC
@@ -248,8 +248,8 @@ func (circuit *Circuit) Prepare(uiChan chan<- util.Param) {
 		circuit.publish("virtualMeter", false)
 	}
 	// initialize sub circuits
-	for ccId := range circuit.Circuits {
-		circuit.Circuits[ccId].Prepare(uiChan)
+	for _, subCircuit := range circuit.Circuits {
+		subCircuit.Prepare(uiChan)
 	}
 }
 
@@ -257,7 +257,7 @@ func (circuit *Circuit) Prepare(uiChan chan<- util.Param) {
 // this is used to update the current consumption etc to get published in status and databases
 func (circuit *Circuit) update() {
 	_, _ = circuit.MaxPhasesCurrent()
-	for subCircuit := range circuit.Circuits {
-		circuit.Circuits[subCircuit].update()
+	for _, subCircuit := range circuit.Circuits {
+		subCircuit.update()
 	}
 }

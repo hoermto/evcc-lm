@@ -59,7 +59,7 @@ func TestParentCircuitHierarchy(t *testing.T) {
 	// add subcircuit with meter
 	limitSub := 20.0
 	mtrSub := &testMeter{cur: 10.0} // consumption of subCircuit
-	circMain.Circuits = append(circMain.Circuits, *NewCircuit("testCircuitSub", limitSub, mtrSub, util.NewLogger("test circuit Sub")))
+	circMain.Circuits = append(circMain.Circuits, NewCircuit("testCircuitSub", limitSub, mtrSub, util.NewLogger("test circuit Sub")))
 	circSub := circMain.GetCircuit("testCircuitSub")
 	assert.NotNilf(t, circSub, "subcircuit not created")
 	circSub.parentCircuit = circMain
