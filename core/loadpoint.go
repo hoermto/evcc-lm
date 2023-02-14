@@ -108,12 +108,14 @@ type Loadpoint struct {
 	sync.Mutex                // guard status
 	Mode       api.ChargeMode `mapstructure:"mode"` // Charge mode, guarded by mutex
 
-	Title             string   `mapstructure:"title"`    // UI title
-	ConfiguredPhases  int      `mapstructure:"phases"`   // Charger configured phase mode 0/1/3
-	ChargerRef        string   `mapstructure:"charger"`  // Charger reference
-	VehicleRef        string   `mapstructure:"vehicle"`  // Vehicle reference
-	VehiclesRef_      []string `mapstructure:"vehicles"` // TODO deprecated
-	MeterRef          string   `mapstructure:"meter"`    // Charge meter reference
+	Title            string   `mapstructure:"title"`    // UI title
+	ConfiguredPhases int      `mapstructure:"phases"`   // Charger configured phase mode 0/1/3
+	ChargerRef       string   `mapstructure:"charger"`  // Charger reference
+	VehicleRef       string   `mapstructure:"vehicle"`  // Vehicle reference
+	VehiclesRef_     []string `mapstructure:"vehicles"` // TODO deprecated
+	MeterRef         string   `mapstructure:"meter"`    // Charge meter reference
+	CircuitRef       string   `mapstructure:"circuit"`  // circuit this lp belongs to
+
 	Soc               SocConfig
 	Enable, Disable   ThresholdConfig
 	ResetOnDisconnect bool `mapstructure:"resetOnDisconnect"`
@@ -123,6 +125,7 @@ type Loadpoint struct {
 	MinCurrent    float64       // PV mode: start current	Min+PV mode: min current
 	MaxCurrent    float64       // Max allowed current. Physically ensured by the charger
 	GuardDuration time.Duration // charger enable/disable minimum holding time
+	CircuitPtr    *Circuit      // circuit this lp belongs to
 
 	enabled             bool      // Charger enabled state
 	phases              int       // Charger enabled phases, guarded by mutex
@@ -626,8 +629,30 @@ func (lp *Loadpoint) syncCharger() {
 
 // setLimit applies charger current limits and enables/disables accordingly
 func (lp *Loadpoint) setLimit(chargeCurrent float64, force bool) error {
+	// apply load management
+	forceCurrentChange := false
+	if lp.CircuitPtr != nil && chargeCurrent > 0.0 {
+		maxCur := lp.CircuitPtr.GetRemainingCurrent()
+		// maxCur includes the consumption of this loadpoint, so adjust using consumer interface
+		curAct, err := lp.MaxPhasesCurrent()
+		if err != nil {
+			lp.log.ERROR.Printf("error getting current consumption: %s", err)
+			return err
+		}
+		newCur := maxCur + curAct
+		// apply not more than requested. If too less current is available, make sure its not negative
+		chargeCurrentNew := math.Min(math.Max(newCur, 0), chargeCurrent)
+		// later here the function checks for having less than MinCurrent()
+		if chargeCurrentNew < chargeCurrent {
+			lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit %s", chargeCurrent, chargeCurrentNew, lp.CircuitPtr.Name)
+			chargeCurrent = chargeCurrentNew
+			// also set force to ensure not overloading the circuit
+			forceCurrentChange = true
+		}
+	}
+
 	// set current
-	if chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent() {
+	if (chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent()) || forceCurrentChange {
 		var err error
 		if charger, ok := lp.charger.(api.ChargerEx); ok && !lp.vehicleHasFeature(api.CoarseCurrent) {
 			err = charger.MaxCurrentMillis(chargeCurrent)
@@ -1233,6 +1258,31 @@ func (lp *Loadpoint) updateChargerStatus() error {
 	return nil
 }
 
+// implements interface Consumer, redirects to effectiveCurrent
+func (lp *Loadpoint) MaxPhasesCurrent() (float64, error) {
+	// using effective current in use.
+	// potential issue: slow LP might cause interference or overload
+	if !lp.charging() {
+		return 0, nil
+	}
+
+	// adjust actual current for vehicles like Zoe where it remains below target
+	if lp.chargeCurrents != nil {
+		return lp.chargeCurrents[0], nil
+	}
+
+	return lp.chargeCurrent, nil
+	// alternatively use assigned current
+	// potential issue: LP in mode != "off" will always report their assigned current, but not real used
+	// if the vehicle remains in state "charging" but only uses 500W for Aircon, this might block 16A in the circuit
+
+	// if !lp.charging() {
+	// 	return 0
+	// } else {
+	// 	return lp.chargeCurrent
+	// }
+}
+
 // effectiveCurrent returns the currently effective charging current
 func (lp *Loadpoint) effectiveCurrent() float64 {
 	if !lp.charging() {
@@ -1824,6 +1874,9 @@ func (lp *Loadpoint) Update(sitePower float64, batteryBuffered bool) {
 	lp.publish("connected", lp.connected())
 	lp.publish("charging", lp.charging())
 	lp.publish("enabled", lp.enabled)
+	if lp.CircuitPtr != nil {
+		lp.publish("circuit", lp.CircuitPtr.Name)
+	}
 
 	// identify connected vehicle
 	if lp.connected() {
