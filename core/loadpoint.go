@@ -671,6 +671,30 @@ func (lp *Loadpoint) checkCircuitAvailableLimit(requestedCurrent float64) (float
 
 		if chargeCurrentNew < requestedCurrent {
 			lp.log.DEBUG.Printf("get current limitation from %.1fA to %.1fA from circuit", requestedCurrent, chargeCurrentNew)
+		}
+
+		// also check power availability
+		// need to calculate from /to currents using phases
+		requestedPower := CurrentToPower(chargeCurrentNew, uint(lp.phases))
+		availablePower := lp.circuit.GetRemainingPower() + lp.chargePower // since current power is included in circuit consumtion, add
+		chargePowerNew := math.Min(math.Max(availablePower, 0), requestedPower)
+		lp.log.TRACE.Printf("request: %.1f, avialable: %.1f, new: %.1f, phases: %d", requestedPower, availablePower, chargePowerNew, uint(lp.phases))
+
+		if chargePowerNew < requestedPower {
+			// lower the current based on phases
+			chargeCurrentNew = powerToCurrent(chargePowerNew, lp.phases)
+			lp.log.DEBUG.Printf("get power limitation from %.1fW to %.1fW (%.1fA) from circuit", requestedPower, chargePowerNew, chargeCurrentNew)
+
+			// TODO: do we want to switch phases in case of lower load awailable due to load management?
+			// // exception: we are < minCurrent and phases > 1 and we can switch phases, then switch to 1 phase in order to not stop charging
+			// if chargeCurrentNew < lp.GetMinCurrent() && lp.phases > 1 && powerToCurrent(chargePowerNew, 1) > lp.GetMinCurrent() {
+			// 	if err := lp.scalePhasesIfAvailable(1); err == nil {
+			// 		lp.log.DEBUG.Printf("switched to 1 phase")
+			// 		chargeCurrentNew = powerToCurrent(chargePowerNew, 1)
+			// 	}
+			// }
+		}
+		if chargeCurrentNew < requestedCurrent {
 			return chargeCurrentNew, nil
 		}
 	}
@@ -921,6 +945,14 @@ func (lp *Loadpoint) MaxPhasesCurrent() (float64, error) {
 	// } else {
 	// 	return lp.chargeCurrent
 	// }
+}
+
+// CurrentPower() implements consumer interface
+func (lp *Loadpoint) CurrentPower() (float64, error) {
+	if !lp.charging() {
+		return 0, nil
+	}
+	return lp.chargePower, nil
 }
 
 // effectiveCurrent returns the currently effective charging current
