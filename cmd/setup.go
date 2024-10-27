@@ -154,6 +154,13 @@ func (c networkConfig) URI() string {
 	return fmt.Sprintf("%s://%s", c.Schema, c.HostPort())
 }
 
+func nameValid(name string) error {
+	if !nameRE.MatchString(name) {
+		return fmt.Errorf("name must not contain special characters or spaces: %s", name)
+	}
+	return nil
+}
+
 func loadConfigFile(conf *globalConfig) error {
 	err := viper.ReadInConfig()
 
@@ -185,6 +192,10 @@ func configureMeters(static []config.Named, names ...string) error {
 
 		if len(names) > 0 && !slices.Contains(names, cc.Name) {
 			continue
+		}
+
+		if err := nameValid(cc.Name); err != nil {
+			log.WARN.Printf("create meter %d: %v", i+1, err)
 		}
 
 		instance, err := meter.NewFromConfig(cc.Type, cc.Other)
@@ -235,6 +246,10 @@ func configureChargers(static []config.Named, names ...string) error {
 			continue
 		}
 
+		if err := nameValid(cc.Name); err != nil {
+			log.WARN.Printf("create charger %d: %v", i+1, err)
+		}
+
 		g.Go(func() error {
 			instance, err := charger.NewFromConfig(cc.Type, cc.Other)
 			if err != nil {
@@ -272,10 +287,6 @@ func configureChargers(static []config.Named, names ...string) error {
 }
 
 func vehicleInstance(cc config.Named) (api.Vehicle, error) {
-	if !nameRE.MatchString(cc.Name) {
-		return nil, fmt.Errorf("vehicle name must not contain special characters or spaces: %s", cc.Name)
-	}
-
 	instance, err := vehicle.NewFromConfig(cc.Type, cc.Other)
 	if err != nil {
 		var ce *util.ConfigError
@@ -285,7 +296,7 @@ func vehicleInstance(cc config.Named) (api.Vehicle, error) {
 
 		// wrap non-config vehicle errors to prevent fatals
 		log.ERROR.Printf("creating vehicle %s failed: %v", cc.Name, err)
-		instance = vehicle.NewWrapper(cc.Name, cc.Other, err)
+		instance = vehicle.NewWrapper(cc.Name, cc.Type, cc.Other, err)
 	}
 
 	// ensure vehicle config has title
@@ -311,6 +322,10 @@ func configureVehicles(static []config.Named, names ...string) error {
 
 		if len(names) > 0 && !slices.Contains(names, cc.Name) {
 			continue
+		}
+
+		if err := nameValid(cc.Name); err != nil {
+			return fmt.Errorf("cannot create vehicle %d: %w", i+1, err)
 		}
 
 		g.Go(func() error {

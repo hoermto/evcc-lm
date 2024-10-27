@@ -30,7 +30,7 @@ titleEdit = "Batterie Zähler bearbeiten"
 capacity = "Kapazität"
 chargeStatus = "Status"
 chargedEnergy = "Geladen"
-current = "Aktuell"
+current = "Strom"
 enabled = "Aktiviert"
 energy = "Energie"
 odometer = "Kilometerstand"
@@ -45,6 +45,10 @@ socLimit = "SoC Begrenzung"
 [config.form]
 example = "Beispiel"
 optional = "optional"
+
+[config.general]
+cancel = "Abbrechen"
+save = "Speichern"
 
 [config.grid]
 titleAdd = "Stromzähler (Netz) hinzufügen"
@@ -72,9 +76,10 @@ validateSave = "Überprüfen & speichern"
 titleAdd = "Zähler (PV) hinzufügen"
 titleEdit = "Zähler (PV) bearbeiten"
 
-[config.site]
-cancel = "Abbrechen"
-save = "Speichern"
+[config.title]
+description = "Wird in der Hauptansicht und im Browser-Tab angezeigt."
+label = "Titel"
+title = "Titel bearbeiten"
 
 [config.validation]
 failed = "fehlgeschlagen"
@@ -192,6 +197,14 @@ description = "Unter normalen Umständen sollte ein Neustart nicht notwendig sei
 disclaimer = "Hinweis: evcc beendet sich und verlässt sich darauf, vom Betriebssystem neu gestartet zu werden."
 modalTitle = "Sicher, dass du neu starten möchtest?"
 
+[loginModal]
+cancel = "Abbrechen"
+error = "Login fehlgeschlagen: "
+invalid = "Passwort ist ungültig."
+login = "Anmelden"
+password = "Passwort"
+title = "Authentifizierung"
+
 [main]
 vehicles = "Parkplatz"
 
@@ -208,6 +221,7 @@ time = "Zeit"
 title = "Plan"
 titleMinSoc = "Min. Ladung"
 titleTargetCharge = "Abfahrt"
+unsavedChanges = "Ungespeicherte Änderungen vorhanden. Jetzt anwenden?"
 update = "Anwenden"
 
 [main.energyflow]
@@ -248,11 +262,13 @@ currents = "Ladestrom"
 default = "default"
 disclaimerHint = "Hinweis:"
 onlyForSocBasedCharging = "Diese Optionen sind nur für Fahrzeuge mit bekanntem Ladestand verfügbar."
+smartCostCheap = "Günstiges Netzladen"
+smartCostClean = "Grünes Netzladen"
 title = "Einstellungen {0}"
 vehicle = "Fahrzeug"
 
 [main.loadpointSettings.limitSoc]
-description = "Dieses Limit wird verwendet, wenn das Fahrzeug angeschlossen wird."
+description = "Dieses Ladelimit wird verwendet, wenn das Fahrzeug angeschlossen wird."
 label = "Standard Ladelimit"
 
 [main.loadpointSettings.maxCurrent]
@@ -331,6 +347,7 @@ detectionActive = "Fahrzeugerkennung läuft …"
 fallbackName = "Fahrzeug"
 moreActions = "Weitere Aktionen"
 none = "Kein Fahrzeug"
+notReachable = "Fahrzeug war nicht erreichbar. Versuche evcc neu zu starten."
 targetSoc = "Ladelimit"
 temp = "Temperatur"
 tempLimit = "Zieltemp."
@@ -342,7 +359,7 @@ charging = "lädt"
 connected = "verbunden"
 disconnected = "getrennt"
 ready = "bereit"
-vehicleTarget = "Fahrzeuglimit: {soc}%"
+vehicleLimit = "Fahrzeuglimit: {soc}%"
 
 [main.vehicleStatus]
 charging = "Ladevorgang aktiv …"
@@ -356,11 +373,11 @@ pvDisable = "Zu wenig Überschuss. Pausiere in {remaining} …"
 pvEnable = "Überschuss verfügbar. Starte in {remaining} …"
 scale1p = "Reduziere auf einphasig in {remaining} …"
 scale3p = "Erhöhe auf dreiphasig in {remaining} …"
-targetChargeActive = "Zielladen aktiv …"
-targetChargePlanned = "Zielladen geplant. Ladung startet {time} Uhr."
-targetChargeWaitForVehicle = "Zielladen bereit. Warte auf Fahrzeug …"
+targetChargeActive = "Ladeplan aktiv …"
+targetChargePlanned = "Ladeplan startet {time} Uhr."
+targetChargeWaitForVehicle = "Ladeplan bereit. Warte auf Fahrzeug …"
 unknown = ""
-vehicleTargetReached = "Fahrzeuglimit {soc}% erreicht."
+vehicleLimitReached = "Fahrzeuglimit {soc}% erreicht."
 waitForVehicle = "Ladebereit. Warte auf Fahrzeug …"
 
 [notifications]
@@ -370,6 +387,19 @@ modalTitle = "Meldungen"
 [offline]
 message = "Keine Verbindung zum Server."
 reload = "Erneut laden?"
+
+[passwordModal]
+description = "Setze ein Passwort, um die Konfiguration zu schützen. Die Hauptansicht bleibt ohne Login zugänglich."
+empty = "Passwort darf nicht leer sein"
+error = "Fehler: "
+labelCurrent = "Aktuelles Passwort"
+labelNew = "Neues Passwort"
+labelRepeat = "Neues Passwort wiederholen"
+newPassword = "Passwort setzen"
+noMatch = "Passwörter stimmen nicht überein"
+titleNew = "Administrator Passwort setzen"
+titleUpdate = "Administrator Passwort ändern"
+updatePassword = "Passwort ändern"
 
 [session]
 cancel = "Abbrechen"

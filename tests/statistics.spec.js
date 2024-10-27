@@ -1,8 +1,8 @@
-const { test, expect } = require("@playwright/test");
-const { start, stop } = require("./evcc");
+import { test, expect } from "@playwright/test";
+import { start, stop } from "./evcc";
 
 test.beforeAll(async () => {
-  await start("statistics.evcc.yaml", "statistics.sql");
+  await start("statistics.evcc.yaml", ["password.sql", "statistics.sql"]);
 });
 test.afterAll(async () => {
   await stop();

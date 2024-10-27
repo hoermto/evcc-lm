@@ -1,6 +1,6 @@
-const { test, expect } = require("@playwright/test");
-const { start, stop } = require("./evcc");
-const { startSimulator, stopSimulator, SIMULATOR_URL } = require("./simulator");
+import { test, expect } from "@playwright/test";
+import { start, stop } from "./evcc";
+import { startSimulator, stopSimulator, SIMULATOR_URL } from "./simulator";
 
 const CONFIG = "simulator.evcc.yaml";
 
@@ -12,7 +12,7 @@ test.afterAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
-  await start(CONFIG);
+  await start(CONFIG, "password.sql");
 
   await page.goto(SIMULATOR_URL);
   await page.getByLabel("Grid Power").fill("500");
